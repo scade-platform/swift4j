@@ -52,16 +52,25 @@ public func checkExceptionAndClear() {
   }
 }
 
+struct JNIError: Error {
+  init() {
+    jni.ExceptionDescribe(env)
+    jni.ExceptionClear(env)
+  }
+}
+
 extension JavaBoolean : ExpressibleByBooleanLiteral {
   public init(booleanLiteral value: Bool) {
     self = value ? JavaBoolean(JNI_TRUE) : JavaBoolean(JNI_FALSE)
   }
 }
 
-
-struct JNIError: Error {
-  init() {
-    jni.ExceptionDescribe(env)
-    jni.ExceptionClear(env)
+public extension JNINativeMethod {
+  init<T>(name: StaticString, sig: StaticString, fn: T) {
+    let name_ptr = UnsafeRawPointer(name.utf8Start).assumingMemoryBound(to: Int8.self)
+    let sig_ptr = UnsafeRawPointer(sig.utf8Start).assumingMemoryBound(to: Int8.self)
+    let fn_ptr = unsafeBitCast(fn, to: UnsafeMutableRawPointer.self)
+    
+    self.init(name: name_ptr, signature: sig_ptr, fnPtr: fn_ptr)
   }
 }

@@ -24,7 +24,8 @@ public protocol JConvertible: JParameterConvertible {
   
   static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Self
   func toStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Void
-  
+
+  //TODO: make obj non-optional, otherwise no sense
   static func fromJavaObject(_ obj: JavaObject?) -> Self
   func toJavaObject() -> JavaObject?
   
@@ -60,11 +61,14 @@ public protocol JObjectConvertible: JConvertible {
 
 extension JObjectConvertible {
   public static var javaSignature: String {
-    return "L\(javaClass.name);"
+    return "L\(javaClass.fqn);"
   }
 
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Self {
     let ret = jni.CallObjectMethod(env, obj, method, args)
+    
+    checkExceptionAndClear()
+    
     return fromJavaObject(ret)
   }
   

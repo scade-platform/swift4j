@@ -10,26 +10,22 @@ import CJNI
 
 public class JObject {
   public let ptr: JavaObject
-  
+  public let weak: Bool
+
   public lazy var cls: JClass = {
     let obj = jni.CallObjectMethod(env, ptr, Object__getClass, [])!
     return JClass(obj)
   }()
   
-  public init(_ ptr: JavaObject) {
-    self.ptr = jni.NewGlobalRef(env, ptr)!
+  public init(_ ptr: JavaObject, weak: Bool = false) {
+    self.ptr = weak ? ptr : jni.NewGlobalRef(env, ptr)!
+    self.weak = weak
   }
-  
-  public convenience init?(_ ptr: JavaObject?) {
-    if let _ptr = ptr {
-      self.init(_ptr as JavaObject)
-    } else {
-      return nil
-    }
-  }
-  
+    
   deinit {
-    jni.DeleteGlobalRef(env, ptr)
+    if self.weak {
+      jni.DeleteGlobalRef(env, self.ptr)
+    }
   }
   
 

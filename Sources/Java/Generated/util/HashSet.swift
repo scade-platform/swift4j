@@ -37,7 +37,7 @@ open class HashSet<E: JObjectConvertible>: Object, AbstractSet, Java.Set {
 }
 
 extension HashSet {
-  open func iterator() -> Java.IteratorProxy<E>? {
+  public func iterator() -> Java.IteratorProxy<E>? {
     self.javaObject.call(method: HashSet__method__4, [])
   }
 }

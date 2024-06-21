@@ -9,25 +9,39 @@ import CJNI
 
 
 public final class JClass : JObject {
-  private var _name: String?
-  
-  public var name: String {
-    if let name = _name {
-      return name
+  private static var _javaClasses: [String: JavaClass] = [:]
+
+  private var _fqn: String?
+
+  public var fqn: String {
+    if let fqn = _fqn {
+      return fqn
     }
     
-    let name: String = call(method: Class__getName)
-    self._name = name
+    let fqn: String = call(method: Class__getName)
+    self._fqn = fqn
+
+    return fqn
+  }
+
+  public convenience init?(fqn: String) {
+    if let jcls = JClass._javaClasses[fqn] {
+      self.init(jcls)
+
+    } else if let jcls = jni.FindClass(env, fqn) {
+      JClass._javaClasses[fqn] = jcls
+      self.init(jcls)
+
+    } else {
+      checkExceptionAndClear()
+      return nil
+    }
     
-    return name
+    self._fqn = fqn
   }
-  
-  fileprivate convenience init(_ obj: JavaObject, name: String) {
-    self.init(obj)
-    self._name = name
-  }
-  
-  
+
+
+
   public func getFieldID(name: String, sig: String) -> JavaFieldID? {
     defer {
       checkExceptionAndClear()
@@ -69,6 +83,14 @@ public final class JClass : JObject {
     return obj
   }
   
+  public func create(_ args: [JConvertible], signature: String? = nil) -> JavaObject {
+    let sig = signature ?? "(\(args.reduce("", { $0 + type(of: $1).javaSignature})))V"
+    guard let ctorId = getMethodID(name: "<init>", sig: sig) else {
+      fatalError("Cannot find constructor with signature (\(sig))V")
+    }
+    return create(ctor: ctorId, args.map{$0.toJavaParameter()})
+  }
+  
   public func create(ctor: JavaMethodID, _ params: JavaParameter...) -> JavaObject {
     return create(ctor: ctor, params)
   }
@@ -77,15 +99,13 @@ public final class JClass : JObject {
     return create(ctor: ctor, args.map{$0.toJavaParameter()})
   }
   
-  public func create(_ args: JConvertible...) -> JavaObject {
-    let sig = args.reduce("", { $0 + type(of: $1).javaSignature})
-    guard let ctorId = getMethodID(name: "<init>", sig: "(\(sig))V") else {
-      fatalError("Cannot find constructor with signature (\(sig))V")
-    }
-    return create(ctor: ctorId, args.map{$0.toJavaParameter()})
+  public func create(_ args: JConvertible..., signature: String? = nil) -> JavaObject {
+    return create(args, signature: signature)
   }
   
-  
+  public func create<T>(_ args: JConvertible..., signature: String? = nil) -> T where T: ObjectProtocol {
+    return T(create(args, signature: signature))
+  }
   
   
   public func getStatic<T: JConvertible>(field: JavaFieldID) -> T {
@@ -173,89 +193,31 @@ public final class JClass : JObject {
       fatalError("Cannot find static method \(method) with signature \(sig)")
     }
     return callStatic(method: methodId, args.map{$0.toJavaParameter()})        
-  }         
+  }
+  
+
+  // Natives
+
+  public func registerNatives(_ natives: JNINativeMethod...) throws {
+    let _ = jni.RegisterNatives(env, self.ptr, natives, JavaInt(natives.count))
+    try checkExceptionAndThrow()
+  }
+  
+  public func unregisterNatives() {
+    let _ = jni.UnregisterNatives(env, self.ptr)
+  }
+  
 }
 
-
-public func registerJavaClass<T: ObjectProtocol>(_ type: T.Type, fqn: String) -> Void {
-  __classnameToSwiftClass[fqn] = type
-  __swiftClassToClassname[ObjectIdentifier(type)] = fqn
-}
-
-
+//@available(*, deprecated, renamed: "JClass.init", message: "Use the JClass initializer instead")
 public func findJavaClass(fqn: String) -> JClass? {
-  if let cls = __javaClasses[fqn] {
-    return cls
-  }
-    
-  if let jcls = jni.FindClass(env, fqn) {  
-    let cls = JClass(jcls, name: fqn)
-    __javaClasses[fqn] = cls
-    return cls
-  } else {
-    checkExceptionAndClear()    
-  }
-  
-  return nil
+  return JClass(fqn: fqn)
 }
 
 
-
-internal func getJavaClass<T: ObjectProtocol>(from type: T.Type) -> JClass {
-  let typeId = ObjectIdentifier(type)
-  guard let fqn = __swiftClassToClassname[typeId] else {
-    var fqn = String(String(reflecting: type).map {
-      $0 == "." ? "/" : $0
-    })
-    
-    print("Looking for Java class \(fqn)")    
-    var cls = findJavaClass(fqn: fqn)
-    
-    if cls == nil {
-      fqn = "com/\(fqn)"
-      cls = findJavaClass(fqn: fqn)
-    }
-        
-    guard let _cls = cls else {
-      fatalError("Cannot find Java class '\(fqn)'")
-    }
-
-    __swiftClassToClassname[typeId] = fqn
-    __classnameToSwiftClass[fqn] = type
-    
-    return _cls
-  }
-  
-  guard let cls = findJavaClass(fqn: fqn) else {
-    fatalError("Cannot find Java class '\(fqn)'")
-  }
-  
-  return cls
-}
-
-
-internal func mapJavaObject<T: ObjectProtocol>(_ obj: JavaObject) -> T {
-  guard let jcls = jni.GetObjectClass(env, obj) else {
-    fatalError("Cannot get Java class from Java object")
-  }
-  
-  let cls = JClass(jcls)
-  let fqn = String(cls.name.map{($0 == ".") ? "/" : $0})
-  
-  if let clazz = __classnameToSwiftClass[fqn] {
-    return (clazz as! T.Type).init(obj)
-  } else {
-    return T.init(obj)
-  }
-}
-
-
-
-
-fileprivate let Class__class = findJavaClass(fqn: "java/lang/Class")!
+fileprivate let Class__class = JClass(fqn: "java/lang/Class")!
 fileprivate let Class__getName = Class__class.getMethodID(name: "getName", sig: "()Ljava/lang/String;")!
 
 
 fileprivate var __javaClasses = Dictionary<String, JClass>()
-fileprivate var __classnameToSwiftClass = Dictionary<String, AnyClass>()
-fileprivate var __swiftClassToClassname = Dictionary<ObjectIdentifier, String>()
+
