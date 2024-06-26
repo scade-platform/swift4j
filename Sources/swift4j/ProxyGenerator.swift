@@ -3,13 +3,14 @@ import Foundation
 import SwiftSyntax
 import SwiftParser
 
+import SwiftSyntaxExtensions
 
 class ProxyGenerator: SyntaxVisitor {
   private let package: String
   private var classGens: [ClassGenerator] = []
 
   init(package: String) {
-    self.package = package
+    self.package = package.replacingOccurrences(of: "-", with: "_")
     super.init(viewMode: .fixedUp)
   }
 
@@ -118,7 +119,7 @@ class MethodGenerator {
   func generate() -> String {
 """
   public \(returnType) \(name)(\(paramDecls)) {
-    return \(implCall);
+    \(implCall);
   }
   private native \(returnType) \(name)Impl(\(paramDeclsImpl));
 """
@@ -135,36 +136,14 @@ class MethodGenerator {
 
   private var implCall: String {
     let params = ["_ptr"] + parameters.map{$0.name}
-    return "this.\(name)Impl(\(params.joined(separator: ", ")))"
+    let call = "this.\(name)Impl(\(params.joined(separator: ", ")))"
+    return funcDecl.signature.returnClause != nil ? "return \(call)" : call
   }
 
   private var returnType: String {
     funcDecl.signature.returnClause?.type.map() ?? "void"
   }
 }
-
-
-
-protocol AttributedDeclSyntax: DeclSyntaxProtocol {
-  var attributes: AttributeListSyntax { get }
-}
-
-
-extension AttributedDeclSyntax {
-  func hasAttribute(name: String) -> Bool {
-    self.attributes.contains {
-      guard case .attribute(let attr) = $0,
-            let attrName = attr.attributeName.as(IdentifierTypeSyntax.self)?.name.text else {
-              return false
-            }
-      return attrName == name
-    }
-  }
-}
-
-
-extension ClassDeclSyntax: AttributedDeclSyntax {}
-extension FunctionDeclSyntax: AttributedDeclSyntax {}
 
 
 extension TypeSyntax {

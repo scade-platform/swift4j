@@ -1,3 +1,4 @@
+import Java
 import SwiftJava
 
 @JavaClass
@@ -9,7 +10,7 @@ public class Foo {
   }
 
   @JavaMethod
-  func receiveMessage(_ msg: String) {
+  func receiveMessage(_ msg: String) {    
     print(msg)
   }
 }

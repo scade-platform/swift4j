@@ -7,7 +7,7 @@ struct Swift4jPlugin: BuildToolPlugin {
     guard let target = target.sourceModule else { return [] }
     
     let outputDir = context.pluginWorkDirectory.appending("GeneratedFiles")
-
+    
     let inputFiles = target.sourceFiles.filter{ $0.path.extension == "swift" }.map{ $0.path }
     let outputFiles = [outputDir.appending(target.name + "_module.java")]
 

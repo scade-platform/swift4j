@@ -134,3 +134,15 @@ public protocol JInterfaceProxy where Self: Object {
 }
 
 
+
+public protocol JObjectRepresentable: AnyObject, JObjectConvertible { 
+  
+}
+
+extension JObjectRepresentable {
+  public static func fromJavaObject(_ obj: JavaObject?) -> Self {
+    let ptr: Int = JObject(obj!).get(field: "_ptr")
+    return unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Self.self)
+  }
+}
+

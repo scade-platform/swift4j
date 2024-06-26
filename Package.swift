@@ -26,8 +26,14 @@ let package = Package(
         .target(name: "Java",
                 dependencies: ["CJNI"]),
 
+        .target(name: "SwiftSyntaxExtensions",
+                dependencies: [
+                  .product(name: "SwiftSyntax", package: "swift-syntax")
+                ]),
+
         .macro(name: "SwiftJavaMacros",
                dependencies: [
+                  "SwiftSyntaxExtensions",
                    .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                    .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
                ]),
@@ -40,6 +46,7 @@ let package = Package(
 
         .executableTarget(name: "swift4j",
                          dependencies: [
+                          "SwiftSyntaxExtensions",
                           .product(name: "ArgumentParser", package: "swift-argument-parser"),
                           .product(name: "SwiftParser", package: "swift-syntax")
                          ]),
