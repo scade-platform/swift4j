@@ -1,5 +1,4 @@
 module CJNI[system] {
     header "jni.h"
-    link "jni"
     export *
 }

@@ -25,9 +25,12 @@ let package = Package(
         .target(
             name: "swift-java-examples",
             dependencies: [.product(name: "SwiftJava", package: "swift-java")],
-            plugins: [
-              .plugin(name: "swift4j-plugin", package: "swift-java")
+            resources: [
+              .process("Foo.java")
             ]
+//            plugins: [
+//              .plugin(name: "swift4j-plugin", package: "swift-java")
+//            ]
         ),
     ]
 )

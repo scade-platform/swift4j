@@ -6,11 +6,11 @@ public class Foo {
 
   @JavaMethod
   func getMessage() -> String {
-    return "Hello From Swift"
+    return "Hello From Swift XXX"
   }
 
   @JavaMethod
   func receiveMessage(_ msg: String) {    
-    print(msg)
+    print("XXX: \(msg)")
   }
 }
