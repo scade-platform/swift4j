@@ -47,7 +47,7 @@ extension JPrimitiveConvertible where PrimitiveType.ConvertibleType == Self {
   }
   
   public static func fromJavaObject(_ obj: JavaObject) -> Self {
-    return  PrimitiveType(obj).value
+    return PrimitiveType(obj).value
   }
 }
 

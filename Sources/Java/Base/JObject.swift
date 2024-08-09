@@ -61,41 +61,60 @@ public class JObject {
     self.set(field: field, sig: T.javaSignature, value: value)
   }
   
-      
-  
+
+
   public func call(method: JavaMethodID, _ args : [JavaParameter]) -> Void {
     jni.CallVoidMethod(env, ptr, method, args)
   }
   
+  public func call(method: String, sig: String, _ args : [JavaParameter]) -> Void {
+    guard let methodId = cls.getMethodID(name: method, sig: sig) else  {
+      fatalError("Cannot find method \"\(method)\" with signature \"\(sig)\"")
+    }
+    return call(method: methodId, args) as Void
+  }
+
   public func call(method: JavaMethodID, _ args : JParameterConvertible...) -> Void {
     call(method: method, args.map{$0.toJavaParameter()}) as Void
   }
-  
+
+  public func call(method: String, sig: String, _ args : JParameterConvertible...) -> Void {
+    call(method: method, sig: sig, args.map{$0.toJavaParameter()}) as Void
+  }
+
   public func call(method: String, _ args : JConvertible...) -> Void {
     let sig = "(\(args.reduce("", { $0 + type(of: $1).javaSignature})))V"
-    guard let methodId = cls.getMethodID(name: method, sig: sig) else  {
-      fatalError("Cannot find method \(method) with signature \(sig)")
-    }
-    return call(method: methodId, args.map{$0.toJavaParameter()}) as Void
+    return call(method: method, sig: sig, args.map{$0.toJavaParameter()}) as Void
   }
   
   
-  
-  
+
+
   public func call<T>(method: JavaMethodID, _ args: [JavaParameter]) -> T where T: JConvertible {
     return T.fromMethod(method, on: ptr, args: args)
   }
   
+  public func call<T>(method: String, sig: String, _ args: [JavaParameter]) -> T where T: JConvertible {
+    guard let methodId = cls.getMethodID(name: method, sig: sig) else  {
+      let methods = cls.call(method: "getMethods", sig: "()[Ljava/lang/reflect/Method;") as [Object]
+      let methods_sigs: [String] = methods.map{$0.javaObject.call(method: "toGenericString")}
+
+      fatalError("Cannot find method \"\(method)\" with signature \"\(sig)\". Available methods: \n \(methods_sigs.joined(separator: "\n"))")
+    }
+    return call(method: methodId, args)
+  }
+
   public func call<T>(method: JavaMethodID, _ args: JParameterConvertible...) -> T where T: JConvertible {
     return call(method: method, args.map{$0.toJavaParameter()})
   }
   
+  public func call<T>(method: String, sig: String, _ args: JParameterConvertible...) -> T where T: JConvertible {
+    return call(method: method, sig: sig, args.map{$0.toJavaParameter()})
+  }
+
   public func call<T>(method: String, _ args : JConvertible...) -> T where T: JConvertible {
     let sig = "(\(args.reduce("", { $0 + type(of: $1).javaSignature})))\(T.javaSignature)"
-    guard let methodId = cls.getMethodID(name: method, sig: sig) else  {
-      fatalError("Cannot find method \(method) with signature \(sig)")
-    }
-    return call(method: methodId, args.map{$0.toJavaParameter()})
+    return call(method: method, sig: sig, args.map{$0.toJavaParameter()})
   }
 }
 

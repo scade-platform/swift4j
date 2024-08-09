@@ -1,16 +1,19 @@
-import Java
 import SwiftJava
 
-@JavaClass
+
+@exported(.android)
+public class Bar {
+  @exported
+  func getMessage() -> String { "Swift" }
+}
+
+
+@exported(.android)
 public class Foo {
-
-  @JavaMethod
-  func getMessage() -> String {
-    return "Hello From Swift XXX"
+  @exported
+  func request(_ response: (Bar) -> Int) {
+    let bar = Bar()
+    print("Response code: \(response(bar))")
   }
 
-  @JavaMethod
-  func receiveMessage(_ msg: String) {    
-    print("XXX: \(msg)")
-  }
 }

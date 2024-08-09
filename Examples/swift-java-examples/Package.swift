@@ -1,6 +1,7 @@
 // swift-tools-version: 5.10
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+import Foundation
 import PackageDescription
 
 let package = Package(
@@ -16,7 +17,8 @@ let package = Package(
     ],
 
     dependencies: [
-      .package(path: "../../")
+      .package(path: "../../"), // Local path to the swift-java package
+      .package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.9.1"))
     ],
 
     targets: [
@@ -24,13 +26,11 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "swift-java-examples",
-            dependencies: [.product(name: "SwiftJava", package: "swift-java")],
-            resources: [
-              .process("Foo.java")
+            dependencies: [
+              .product(name: "SwiftJava", package: "swift-java"),
+              .product(name: "Alamofire", package: "Alamofire")
             ]
-//            plugins: [
-//              .plugin(name: "swift4j-plugin", package: "swift-java")
-//            ]
-        ),
+        )
     ]
 )
+

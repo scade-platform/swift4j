@@ -49,22 +49,17 @@ struct Swift4jCommand: ParsableCommand {
 
     for p in paths {
       for res in try generator.run(path: p) {
-        try res.content.write(to: filename(for: res.classname), atomically: true, encoding: .utf8)
+        if let outdir = outdir {
+          let dest = URL(fileURLWithPath: "\(outdir)/\(res.classname).java" )
+          try res.content.write(to: dest, atomically: true, encoding: .utf8)
+          
+        } else {
+          print(res.content, "\n")
+        }
       }
     }
 
-    let packageClass = generator.generatePackageClass()
-    try packageClass.write(to: filename(for: "\(package)_module"), atomically: true, encoding: .utf8)
+    // let packageClass = generator.generatePackageClass()
+    // try packageClass.write(to: filename(for: "\(package)_module"), atomically: true, encoding: .utf8)
   }
-
-  func filename(for classname: String) -> URL {
-    var outpath: String
-    if let outdir = outdir {
-      outpath = outdir
-    } else {
-      outpath = FileManager.default.currentDirectoryPath
-    }
-    return URL(fileURLWithPath: "\(outpath)/\(classname).java" )
-  }
-
 }

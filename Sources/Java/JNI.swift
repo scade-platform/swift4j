@@ -59,18 +59,27 @@ struct JNIError: Error {
   }
 }
 
+
+
+// MARK: - Extensions
+
 extension JavaBoolean : ExpressibleByBooleanLiteral {
   public init(booleanLiteral value: Bool) {
     self = value ? JavaBoolean(JNI_TRUE) : JavaBoolean(JNI_FALSE)
   }
 }
 
+extension JavaObject : JParameterConvertible {
+  public func toJavaParameter()  -> JavaParameter { JavaParameter(object: self) }
+}
+
+
 public extension JNINativeMethod {
   init<T>(name: StaticString, sig: StaticString, fn: T) {
     let name_ptr = UnsafeRawPointer(name.utf8Start).assumingMemoryBound(to: Int8.self)
     let sig_ptr = UnsafeRawPointer(sig.utf8Start).assumingMemoryBound(to: Int8.self)
     let fn_ptr = unsafeBitCast(fn, to: UnsafeMutableRawPointer.self)
-    
+
     self.init(name: name_ptr, signature: sig_ptr, fnPtr: fn_ptr)
   }
 }

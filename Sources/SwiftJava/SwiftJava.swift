@@ -1,14 +1,21 @@
-import Java
+@_exported import Java
+
+public enum Platform: Equatable {
+    case android
+    case darwin
+    case linux
+    case windows
+}
+
 
 @attached(peer, names: suffixed(_class_init))
-@attached(member, 
+@attached(member,
           names: named(jobj), named(javaClass), named(init_jni_t), named(init_jni), named(deinit_jni_t), named(deinit_jni), arbitrary)
 @attached(extension, conformances: JObjectRepresentable, names: named(toJavaObject))
-public macro JavaClass() =
+public macro exported(_ platforms: Platform...) =
   #externalMacro(module: "SwiftJavaMacros", type: "JavaClassMacro")
 
 
 @attached(peer, names: prefixed(__))
-//@attached(member, names: named(javaObject))
-public macro JavaMethod() =
+public macro exported() =
   #externalMacro(module: "SwiftJavaMacros", type: "JavaMethodMacro")

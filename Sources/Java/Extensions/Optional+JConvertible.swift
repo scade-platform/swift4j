@@ -26,6 +26,3 @@ extension Optional: JObjectConvertible, JConvertible, JParameterConvertible wher
     return nil
   }
 }
-
-
-

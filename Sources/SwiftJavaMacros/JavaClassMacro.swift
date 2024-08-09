@@ -1,12 +1,19 @@
 import Foundation
+
 import SwiftSyntax
+import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 import SwiftSyntaxExtensions
 
-public struct JavaClassMacro { 
+
+// MARK: JavaClassMacro
+
+public struct JavaClassMacro {
+  enum Error: Swift.Error { case message(String) }
 
   static func moduleName(from context: some SwiftSyntaxMacros.MacroExpansionContext, for classDecl: ClassDeclSyntax) -> String? {
+
     guard let segments = context.location(of: classDecl)?.file.as(StringLiteralExprSyntax.self)?.segments,
           segments.count == 1, case .stringSegment(let literalSegment)? = segments.first,
           let moduleNameSep = literalSegment.content.text.firstIndex(of: "/") else { return nil }
@@ -16,25 +23,30 @@ public struct JavaClassMacro {
   
   static func assertClassDecl(_ decl: some SyntaxProtocol) throws -> ClassDeclSyntax {
     guard let classDecl = decl.as(ClassDeclSyntax.self) else {
-      throw MacroError.message("Macro can only be applied to a class declaration")
+      throw Error.message("Macro can only be applied to a class declaration")
     }
 
     return classDecl
   }
 
-  static func javaFuncDecls(from classDecl: ClassDeclSyntax) -> [FunctionDeclSyntax] {
+  static func exportedFuncDecls(from classDecl: ClassDeclSyntax) -> [FunctionDeclSyntax] {
     return classDecl.memberBlock.members.compactMap {
       guard let funcDecl = $0.decl.as(FunctionDeclSyntax.self),
-              funcDecl.hasAttribute(name: "JavaMethod") else { return nil }
+              funcDecl.hasAttribute(name: "exported") else { return nil }
       return funcDecl
     }
   }
 }
 
 
+
+// MARK: +PeerMacro
+
 extension JavaClassMacro: PeerMacro {
-  public static func expansion(of node: SwiftSyntax.AttributeSyntax, providingPeersOf declaration: some SwiftSyntax.DeclSyntaxProtocol, in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.DeclSyntax] {
-    
+  public static func expansion(of node: SwiftSyntax.AttributeSyntax, 
+                               providingPeersOf declaration: some SwiftSyntax.DeclSyntaxProtocol,
+                               in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.DeclSyntax] {
+
     let classDecl = try assertClassDecl(declaration)
     let className = classDecl.name.text
 
@@ -42,13 +54,11 @@ extension JavaClassMacro: PeerMacro {
     if let moduleName = moduleName(from: context, for: classDecl) {
       fqnEscaped = moduleName.replacingOccurrences(of: "_", with: "_1") + "_" + fqnEscaped
     }
-    
-    let javaFuncDecls = javaFuncDecls(from: classDecl)
 
-    let nativeMethods = try javaFuncDecls
+    let nativeMethods = try exportedFuncDecls(from: classDecl)
       .map {
 """
-JNINativeMethod(name: "\($0.name.text)", sig: "\(try $0.jniSignature())", fn: \(className).\($0.name.text)_jni)
+JNINativeMethod(name: "\($0.name.text)Impl", sig: "\(try $0.jniSignature())", fn: \(className).\($0.name.text)_jni)
 """
       } + [
 """
@@ -70,11 +80,13 @@ func \(raw: className)_class_init() {
   }
 }
 
+// MARK: +MemberMacro
 
 extension JavaClassMacro: MemberMacro {
-  public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext
-  ) throws -> [DeclSyntax] {
-
+  public static func expansion(of node: AttributeSyntax, 
+                               providingMembersOf declaration: some DeclGroupSyntax,
+                               conformingTo protocols: [TypeSyntax],
+                               in context: some MacroExpansionContext) throws -> [DeclSyntax] {
 
     let classDecl = try assertClassDecl(declaration)
     let className = classDecl.name.text
@@ -83,10 +95,8 @@ extension JavaClassMacro: MemberMacro {
     if let moduleName = moduleName(from: context, for: classDecl) {
       fqn = "\(moduleName)/\(fqn)"
     }
-    
-    let javaFuncDecls = javaFuncDecls(from: classDecl)
 
-    return try [
+    let initDecls: [DeclSyntax] = [
 """
 private var jobj: JObject? = nil
 public static var javaClass = JClass(fqn: \"\(raw: fqn)\")!
@@ -104,13 +114,25 @@ fileprivate static let deinit_jni: deinit_jni_t = { _, ptr in
   Refs.release(_self)
 }
 """
-    ] + javaFuncDecls.map { try $0.bridgeDecls(classDecl: classDecl) }
+    ]
+    
+    let funcDecls = try exportedFuncDecls(from: classDecl).map {
+      try $0.makeBridgingDecls(classDecl: classDecl)
+      //DeclSyntax(.formatted())!
+    }
+
+    return initDecls + funcDecls
   }
 }
 
+// MARK: +ExtensionMacro
 
 extension JavaClassMacro: ExtensionMacro {
-  public static func expansion(of node: SwiftSyntax.AttributeSyntax, attachedTo declaration: some SwiftSyntax.DeclGroupSyntax, providingExtensionsOf type: some SwiftSyntax.TypeSyntaxProtocol, conformingTo protocols: [SwiftSyntax.TypeSyntax], in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
+  public static func expansion(of node: SwiftSyntax.AttributeSyntax, 
+                               attachedTo declaration: some SwiftSyntax.DeclGroupSyntax,
+                               providingExtensionsOf type: some SwiftSyntax.TypeSyntaxProtocol,
+                               conformingTo protocols: [SwiftSyntax.TypeSyntax],
+                               in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
 
     return [try ExtensionDeclSyntax(
 """
@@ -130,20 +152,18 @@ extension \(type.trimmed): JObjectRepresentable {
 }
 
 
-enum MacroError: Error { case message(String) }
+// MARK: SwiftSyntax Extensions
 
 
 extension FunctionDeclSyntax {
-
   func jniSignature() throws -> String {
-    let params = try signature.parameterClause.parameters
+    let params = try ["J"] + signature.parameterClause.parameters
       .map{ try $0.type.jniSignature() }
-      .joined(separator: ", ")
-    
-    return "(\(params))\(try signature.returnClause?.type.jniSignature() ?? "V")"
+
+    return "(\(params.joined()))\(try signature.returnClause?.type.jniSignature() ?? "V")"
   }
 
-  func bridgeDecls(classDecl: ClassDeclSyntax) throws -> DeclSyntax {
+  func makeBridgingDecls(classDecl: ClassDeclSyntax) throws -> DeclSyntax {
     let paramTypes = try [
       "UnsafeMutablePointer<JNIEnv>", "JavaObject?", "JavaLong"
     ] + signature.parameterClause.parameters.map{ try $0.type.jniType() }
@@ -153,109 +173,241 @@ extension FunctionDeclSyntax {
     let closureParams = [
       "_", "_", "ptr"
     ] + signature.parameterClause.parameters.map{ $0.name }
+    
+    let (call, stmts) = try makeBridgingFunctionBody()
 
     return
 """
 fileprivate typealias \(raw: name.text)_jni_t = @convention(c)(\(raw: paramTypes.joined(separator: ", "))) -> \(raw: returnType)
 fileprivate static let \(raw: name.text)_jni: \(raw: name.text)_jni_t = {\(raw: closureParams.joined(separator: ", ")) in
   let _self = unsafeBitCast(Int(truncatingIfNeeded: ptr), to: \(raw: classDecl.name.text).self)
-  \(raw: try implCall())
+  \(raw: stmts.joined(separator: "\n  "))
+  \(raw: call)
 }
 """
   }
 
-  func implCall() throws -> String {
-    let params = try signature.parameterClause.parameters
-      .map { try $0.fromJava() }
-      .joined(separator: ", ")
+  func makeBridgingFunctionBody() throws -> (call: String, stmts: [String]) {
+    let mapping = try signature.parameterClause.parameters
+      .reduce(into: ([String](), [String]())) {
+        let (param, stmts) = try $1.fromJava()
+        $0.0.append(param)
+        $0.1.append(contentsOf: stmts)
+      }
 
-    let call = "_self.\(name.text)(\(params))"
+    var call = "_self.\(name.text)(\(mapping.0.joined(separator: ",")))"
+    var stmts = mapping.1
 
     if let retType = signature.returnClause?.type {
-      return try "return \(retType.toJava(expr: call))"
-    } else {
-      return call
+      let ret_mapping = try retType.toJava(call)
+
+      call = "return \(ret_mapping.0)"
+      stmts.append(contentsOf: ret_mapping.1)
     }
+
+    return (call, stmts)
   }
 }
+
+
+
+typealias MappingRetType = (mapped: String, stmts: [String])
+
 
 extension FunctionParameterSyntax {
   var name: String { (secondName ?? firstName).text }
 
-  func toJava() throws -> String {
-    try type.toJava(expr: name)
+  func toJava() throws -> MappingRetType {
+    try type.toJava(name)
   }
-  func fromJava() throws -> String {
-    try type.fromJava(expr: name)
+  func fromJava() throws -> MappingRetType {
+    try type.fromJava(name)
   }
 }
+
+
+
+protocol JavaMappedTypeSyntax: SyntaxProtocol {
+  func jniSignature(primitivesAsObjects: Bool) -> String
+  func jniType(primitivesAsObjects: Bool) -> String
+
+  func toJava(_: String, primitivesAsObjects: Bool) throws -> MappingRetType
+  func fromJava(_: String, primitivesAsObjects: Bool) throws -> MappingRetType
+}
+
+
+extension JavaMappedTypeSyntax {
+  var typedEntityName: String? {
+    if let funcParam = parent?.as(FunctionParameterSyntax.self) {
+      return funcParam.name
+    }
+    return nil
+  }
+}
+
 
 extension TypeSyntax {
-  func jniSignature() throws -> String {
-    if let identTypeSyntax = self.as(IdentifierTypeSyntax.self) {
-      return identTypeSyntax.jniSignature()
+  func map() throws -> any JavaMappedTypeSyntax {
+    if let typeSyntax = self.as(IdentifierTypeSyntax.self) {
+      return typeSyntax
+
+    } else if let typeSyntax = self.as(FunctionTypeSyntax.self) {
+      return typeSyntax
     }
 
-    throw MacroError.message("Unsupported type")
+    throw JavaClassMacro.Error.message("Unsupported type")
   }
 
-  func jniType() throws -> String {
-    if let identTypeSyntax = self.as(IdentifierTypeSyntax.self) {
-      return identTypeSyntax.jniType()
-    }
-
-    throw MacroError.message("Unsupported type")
+  func jniSignature(primitivesAsObjects: Bool = false) throws -> String {
+    try map().jniSignature(primitivesAsObjects: primitivesAsObjects)
   }
 
-  func toJava(expr: String) throws -> String {
-    if let identTypeSyntax = self.as(IdentifierTypeSyntax.self) {
-      return identTypeSyntax.isPrimitive ? expr : "\(expr).toJavaObject()"
-    }
-
-    throw MacroError.message("Unsupported type")
+  func jniType(primitivesAsObjects: Bool = false ) throws -> String {
+    try map().jniType(primitivesAsObjects: primitivesAsObjects)
   }
 
-  func fromJava(expr: String) throws -> String {
-    if let identTypeSyntax = self.as(IdentifierTypeSyntax.self) {
-      return identTypeSyntax.isPrimitive ? expr : "\(identTypeSyntax.name.text).fromJavaObject(\(expr))"
-    }
+  func toJava(_ expr: String, primitivesAsObjects: Bool = false) throws -> MappingRetType {
+    try map().toJava(expr, primitivesAsObjects: primitivesAsObjects)
+  }
 
-    throw MacroError.message("Unsupported type")
+  func fromJava(_ expr: String, primitivesAsObjects: Bool = false) throws -> MappingRetType {
+    try map().fromJava(expr, primitivesAsObjects: primitivesAsObjects)
   }
 }
 
-extension IdentifierTypeSyntax {
+
+
+
+extension IdentifierTypeSyntax: JavaMappedTypeSyntax {
   var isPrimitive: Bool {
     switch self.name.text {
-    case "Bool", "Int", "Int64", "Int32", "Int16", "Int8", "Float", "Double": true
+    case "Void", "Bool", "Int", "Int64", "Int32", "Int16", "Int8", "Float", "Double": true
     default: false
     }
   }
 
-  func jniSignature() -> String {
+  func jniSignature(primitivesAsObjects: Bool) -> String {
     switch self.name.text {
-    case "Bool": "Z"
-    case "Int", "Int64": "J"
-    case "Int32": "I"
-    case "Int16": "S"
-    case "Int8": "B"
-    case "Float": "F"
-    case "Double": "D"
+    case "Void": "V"
+    case "Bool": primitivesAsObjects ? "Ljava/lang/Boolean;" : "Z"
+    case "Int", "Int64": primitivesAsObjects ? "Ljava/lang/Long;" : "J"
+    case "Int32": primitivesAsObjects ? "Ljava/lang/Integer;" : "I"
+    case "Int16": primitivesAsObjects ? "Ljava/lang/Short;" : "S"
+    case "Int8": primitivesAsObjects ? "Ljava/lang/Byte;" : "B"
+    case "Float": primitivesAsObjects ? "Ljava/lang/Float;" : "F"
+    case "Double": primitivesAsObjects ? "Ljava/lang/Double;" : "D"
     case "String": "Ljava/lang/String;"
     default: self.name.text
     }
   }
 
-  func jniType() -> String {
+  func jniType(primitivesAsObjects: Bool) -> String {
     switch self.name.text {
-    case "Bool": "JavaBoolean"
-    case "Int", "Int64": "JavaLong"
-    case "Int32": "JavaInt"
-    case "Int16": "JavaShort"
-    case "Int8": "JavaByte"
-    case "Float": "JavaFloat"
-    case "Double": "JavaDouble"
+    case "Void": "void"
+    case "Bool": primitivesAsObjects ? "JavaObject" : "JavaBoolean"
+    case "Int", "Int64": primitivesAsObjects ? "JavaObject" : "JavaLong"
+    case "Int32": primitivesAsObjects ? "JavaObject" : "JavaInt"
+    case "Int16": primitivesAsObjects ? "JavaObject" : "JavaShort"
+    case "Int8": primitivesAsObjects ? "JavaObject" : "JavaByte"
+    case "Float": primitivesAsObjects ? "JavaObject" : "JavaFloat"
+    case "Double": primitivesAsObjects ? "JavaObject" : "JavaDouble"
     default: "JavaObject?"
     }
+  }
+
+  func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
+    return (isPrimitive && !primitivesAsObjects ? expr : "\(expr).toJavaObject()", [])
+  }
+
+  func fromJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
+    if isPrimitive {
+      if primitivesAsObjects {
+        let _expr = "(\(expr) as \(name.text).PrimitiveType).value"
+        return (name.text == "Int" ? "Int(\(_expr))" : _expr, [])
+
+      } else {
+        return (expr, [])
+      }
+    } else {
+      return ("\(name.text).fromJavaObject(\(expr))", [])
+    }
+  }
+}
+
+
+extension FunctionTypeSyntax: JavaMappedTypeSyntax {
+  func paramName() throws -> String   {
+    guard let paramName = typedEntityName else {
+      throw JavaClassMacro.Error.message("Unknown function parameter name")
+    }
+    return paramName
+  }
+
+  func javaCallMethod() throws -> (name: String, sig: String) {
+    let name: String
+    if parameters.count == 0 && !isVoid {
+      name = "get"
+    } else {
+      name = isVoid ? "accept" : "apply"
+    }
+    
+    let params = Array<String>(repeating: "Ljava/lang/Object;", count: parameters.count)
+    let sig = "(\(params.joined()))\(isVoid ? "V" : "Ljava/lang/Object;")"
+
+/*
+    let params = try parameters.map{ try $0.type.jniSignature(primitivesAsObjects: true) }
+    let sig = "(\(params.joined()))\(try returnClause.type.jniSignature(primitivesAsObjects: true))"
+*/
+
+    return (name, sig)
+  }
+
+  func jniSignature(primitivesAsObjects: Bool) -> String {
+    "L\(javaFunctionalInterface.replacingOccurrences(of: ".", with: "/"));"
+  }
+
+  func jniType(primitivesAsObjects: Bool) -> String { "JavaObject?" }
+
+  func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType { ("nil", []) }
+
+  func fromJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
+    let paramName = try paramName()
+
+    let stmts: [String] = [
+      "guard let \(paramName) = \(paramName) else { fatalError(\"Cannot call a null closure\") }",
+      "let _\(paramName) = JObject(\(paramName))"
+    ]
+
+    let (closure_call, closure_stmts) = try makeBridgingClosureBody()
+
+
+    let closure_param =
+"""
+{
+  \(closure_stmts.joined(separator: "\n  "))
+  \(closure_call)
+}
+"""
+    return (closure_param, stmts)
+  }
+
+  func makeBridgingClosureBody() throws -> (call: String, stmts: [String]) {
+    let mapping = try parameters.enumerated()
+      .reduce(into: ([String](), [String]())) {
+        let (param, stmts) = try $1.1.type.toJava("$\($1.0)", primitivesAsObjects: true)
+        $0.0.append("JavaParameter(object: \(param))")
+        $0.1.append(contentsOf: stmts)
+      }
+    
+    let params_stmts = [
+      "let params = [\(mapping.0.joined(separator: ","))]"
+    ]
+
+    let method = try javaCallMethod()
+
+    let call = "_\(try paramName()).call(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
+    let call_ret = try returnClause.type.fromJava(call, primitivesAsObjects: true)
+    
+    return ("return \(call_ret.0)", mapping.1 + params_stmts + call_ret.1)
   }
 }

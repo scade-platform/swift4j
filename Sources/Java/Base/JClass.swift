@@ -62,7 +62,7 @@ public final class JClass : JObject {
   public func getMethodID(name: String, sig: String)  -> JavaMethodID? {
     defer {
       checkExceptionAndClear()
-    }
+    }    
     return jni.GetMethodID(env, self.ptr, name, sig)
   }
   

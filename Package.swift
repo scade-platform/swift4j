@@ -12,7 +12,9 @@ let package = Package(
         .library(name: "SwiftJava", targets: ["SwiftJava"]),
         
         .executable(name: "swift4j", targets: ["swift4j"]),
-        .plugin(name: "swift4j-plugin", targets: ["swift4j-plugin"])
+
+        .plugin(name: "swift4j-plugin", targets: ["swift4j-plugin"]),
+        .plugin(name: "generate-java-bridging", targets: ["generate-java-bridging"])
     ],
 
     dependencies: [
@@ -53,8 +55,16 @@ let package = Package(
 
         .plugin(name: "swift4j-plugin",
                 capability: .buildTool(),
-                dependencies: ["swift4j"])
+                dependencies: ["swift4j"]),
 
+        
+        .plugin(name: "generate-java-bridging",
+                capability: .command(
+                  intent: .custom(verb: "generate-java-bridging",
+                                  description: "Generate Java bridging proxies for the Swift classes"),
+                  permissions: []),
+                dependencies: ["swift4j"]
+               )
 
 /*
         .testTarget(name: "SwiftJavaTests",
