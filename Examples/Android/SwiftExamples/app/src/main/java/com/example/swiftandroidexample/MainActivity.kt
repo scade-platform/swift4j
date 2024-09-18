@@ -16,13 +16,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.swiftandroidexample.ui.theme.SwiftAndroidExampleTheme
 
+import swift_java_examples.Service
+
 class MainActivity : ComponentActivity() {
     private val greetingText = mutableStateOf("Android")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        initSwiftFoundation()
+        // TEMPORARILY DISABLED
+        // TDB: should be initialized from a companion "swift-java" library published as a Gradle dependency
+        // initSwiftFoundation()
 
         enableEdgeToEdge()
         setContent {
@@ -35,23 +39,23 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-
         System.loadLibrary("swift-java-examples")
 
-        val foo = swift_java_examples.Foo()
-        foo.request { resp ->
+        val srv = Service()
+        srv.request { resp ->
             greetingText.value = resp.message
-            200
         }
     }
 
+
     private fun initSwiftFoundation(){
         try {
-            org.swift.swiftfoundation.SwiftFoundation.Initialize(this, false)
+            //org.swift.swiftfoundation.SwiftFoundation.Initialize(this, false)
         } catch (err: Exception) {
             Log.e("Swift", "Can't initialize Swift Foundation: $err")
         }
     }
+
 
     @Composable
     fun Greeting(modifier: Modifier = Modifier) {

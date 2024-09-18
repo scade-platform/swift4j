@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+
+    id("io.scade.gradle.plugins.android.swiftpm") version "1.0.0"
 }
 
 android {
@@ -44,16 +46,9 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ["lib"]
-        }
-    }
 }
 
 dependencies {
-    implementation fileTree(dir: 'lib', include: ['*.jar'])
-
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.androidx.activity.compose
@@ -71,32 +66,8 @@ dependencies {
     debugImplementation libs.androidx.ui.test.manifest
 }
 
-tasks.register('buildSwiftProject') {
-    doLast {
-        exec {
-            commandLine 'scd', 'build',
-                    '--path', '../../../',
-                    '--platform', 'macos',
-                    '--target', 'SwiftJava'
-        }
 
-        exec {
-            commandLine 'swift', 'package', '--package-path', '../../../', 'plugin', 'generate-java-bridging'
-        }
-
-        exec {
-            commandLine 'scd', 'archive',
-                    '--path', '../../../',
-                    '--platform', 'android-arm64-v8a',
-                    '--platform', 'android-x86_64',
-                    '--type', 'android',
-                    '--java-sources', '../../../.build/plugins/generate-java-bridging/outputs'
-        }
-    }
-}
-
-tasks.configureEach { task ->
-    if (task.name == 'assembleDebug' || task.name == 'assembleRelease') {
-        task.dependsOn buildSwiftProject
-    }
+swiftpm {
+    path = file("../../../Packages/swift-java-examples")
+    product = "swift-java-examples"
 }

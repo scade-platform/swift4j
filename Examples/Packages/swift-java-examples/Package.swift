@@ -6,7 +6,7 @@ import PackageDescription
 
 let package = Package(
     name: "swift-java-examples",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS(.v13)],
 
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
@@ -17,8 +17,7 @@ let package = Package(
     ],
 
     dependencies: [
-      .package(path: "../../"), // Local path to the swift-java package
-      .package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.9.1"))
+      .package(path: "../../../"), // Local path to the swift-java package
     ],
 
     targets: [
@@ -27,8 +26,7 @@ let package = Package(
         .target(
             name: "swift-java-examples",
             dependencies: [
-              .product(name: "SwiftJava", package: "swift-java"),
-              .product(name: "Alamofire", package: "Alamofire")
+              .product(name: "SwiftJava", package: "swift-java"),              
             ]
         )
     ]
