@@ -1,39 +1,72 @@
 import PackagePlugin
 import Foundation
 
+
+
 @main
 struct GenerateJavaBridgingPlugin: CommandPlugin {
   func performCommand(context: PluginContext, arguments: [String]) throws {
     let toolPath = try URL(filePath: context.tool(named: "swift4j").path.string)
     let outputDir = context.pluginWorkDirectory
 
-    
-    for prod in context.package.products {
-      let prodOutputDir = outputDir.appending(prod.name).string
+    var argExtractor = ArgumentExtractor(arguments)
+    let prodNames = argExtractor.extractOption(named: "product")
 
-      var isDirectory: ObjCBool = false
-      if !FileManager.default.fileExists(atPath: prodOutputDir, isDirectory: &isDirectory) {
-        try FileManager.default.createDirectory(at: URL(filePath: prodOutputDir), withIntermediateDirectories: false)
-      }
+    let products = prodNames.isEmpty
+    ? context.package.products
+    : try context.package.products(named: prodNames)
 
-      let prodSrcMods = prod.sourceModules.flatMap {
-        [$0] + $0.recursiveTargetDependencies.compactMap{ dep in dep.sourceModule }
-      }
-
-      var processed = Set<String>()
-      
-      for srcMod in prodSrcMods {
-        guard !processed.contains(srcMod.id) else { continue }
-        try generate(for: srcMod, with: toolPath, to: prodOutputDir)
-        processed.insert(srcMod.id)
+    for prod in products  {
+      try sourceModules(from: prod).forEach {
+        print("Generating bridging for '\($0.moduleName)'...")
+        try generate(for: $0, with: toolPath, to: outputDir.appending(prod.name))
       }
     }
   }
-  
-  private func generate(for sourceModule: any SourceModuleTarget, with toolPath: URL, to outputDir: String) throws {
+
+  private func generate(for sourceModule: any SourceModuleTarget, with toolPath: URL, to outputDir: PackagePlugin.Path) throws {
+    let pkgName = sourceModule.name.replacingOccurrences(of: "-", with: "_")
+    let outPath = outputDir.appending(["main", "java"]).string
+
+    if FileManager.default.fileExists(atPath: outPath) {
+      try FileManager.default.removeItem(atPath: outPath)
+    }
+
+    try FileManager.default.createDirectory(at: URL(filePath: outPath), withIntermediateDirectories: true)
+
     try Process.run(toolPath, arguments: [
-      "-o", outputDir,
-      "--package", sourceModule.name
+      "-o", outPath,
+      "--package", pkgName
     ] + sourceModule.sourceFiles.map{ $0.path.string }.filter{$0.hasSuffix(".swift")})
+  }
+
+  private func sourceModules(from product: any Product) -> [any SourceModuleTarget] {
+    func traverseSourceModules(_ target: any SourceModuleTarget, modules: inout [any SourceModuleTarget], processed: inout Set<String>) {
+      guard !processed.contains(target.id) else { return }
+
+      modules.append(target)
+      processed.insert(target.id)
+
+      target.dependencies.forEach {
+        switch $0 {
+        case .target(let t):
+          if let sm = t.sourceModule {
+            traverseSourceModules(sm, modules: &modules, processed: &processed)
+          }
+        default:
+          return
+        }
+      }
+    }
+
+    var modules = [any SourceModuleTarget]()
+    var processed = Set<String>()
+
+    product.sourceModules.forEach {
+      traverseSourceModules($0, modules: &modules, processed: &processed)
+    }
+
+    return modules
+
   }
 }

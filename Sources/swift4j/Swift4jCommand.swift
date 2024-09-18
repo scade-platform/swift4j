@@ -6,7 +6,7 @@ struct Swift4jCommand: ParsableCommand {
   @Option(name: .shortAndLong,
           help: "Output directory")
   var outdir: String?
-  
+
   @Option(name: .long,
           help: "Java package name")
   var package: String
@@ -50,7 +50,14 @@ struct Swift4jCommand: ParsableCommand {
     for p in paths {
       for res in try generator.run(path: p) {
         if let outdir = outdir {
-          let dest = URL(fileURLWithPath: "\(outdir)/\(res.classname).java" )
+          let pkgDir = URL(filePath: "\(outdir)/\(package)")
+
+          var isDirectory: ObjCBool = false
+          if !FileManager.default.fileExists(atPath: pkgDir.path(), isDirectory: &isDirectory) {
+            try FileManager.default.createDirectory(at: pkgDir, withIntermediateDirectories: true)
+          }
+
+          let dest = pkgDir.appending(path: "\(res.classname).java")
           try res.content.write(to: dest, atomically: true, encoding: .utf8)
           
         } else {

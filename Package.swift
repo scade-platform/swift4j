@@ -5,7 +5,7 @@ import CompilerPluginSupport
 
 let package = Package(
     name: "Java",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS(.v13)],
 
     products: [
         .library(name: "Java", type: .static, targets: ["Java"]),

@@ -25,18 +25,12 @@ public final class JClass : JObject {
   }
 
   public convenience init?(fqn: String) {
-    if let jcls = JClass._javaClasses[fqn] {
-      self.init(jcls)
-
-    } else if let jcls = jni.FindClass(env, fqn) {
-      JClass._javaClasses[fqn] = jcls
-      self.init(jcls)
-
-    } else {
+    guard let jcls = jni.FindClass(env, fqn) else {
       checkExceptionAndClear()
       return nil
     }
-    
+
+    self.init(jcls)
     self._fqn = fqn
   }
 

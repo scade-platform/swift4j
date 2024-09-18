@@ -15,7 +15,7 @@ class ProxyGenerator: SyntaxVisitor {
   private var classGens: [ClassGenerator] = []
 
   init(package: String) {
-    self.package = package.replacingOccurrences(of: "-", with: "_")
+    self.package = package
     super.init(viewMode: .fixedUp)
   }
 
@@ -85,10 +85,10 @@ class ClassGenerator: SyntaxVisitor {
   func generate(with ctx: inout Context) -> String {
 """
 public class \(name) {
-  private long _ptr;
+  private final long _ptr;
 
   static {
-    \(name)_class_init();
+    \(name)_class_init(\(name).class);
   }
   
   public \(name)() {
@@ -106,7 +106,7 @@ public class \(name) {
 
   private static native long init();
   private static native void deinit(long ptr);
-  private static native void \(name)_class_init();
+  private static native void \(name)_class_init(Class<?> cls);
 
 \(methodsGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
 }

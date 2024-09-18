@@ -70,10 +70,11 @@ JNINativeMethod(name: "deinit", sig: "(J)V", fn: \(className).deinit_jni)
     return [
 """
 @_cdecl("Java_\(raw: fqnEscaped)_\(raw: className)_1class_1init")
-func \(raw: className)_class_init() {
-  try! \(raw: className).javaClass.registerNatives(
+func \(raw: className)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClass?) {
+  let natives = [
     \(raw: nativeMethods.joined(separator: ",\n"))
-  )
+  ]
+  let _ = jni.RegisterNatives(env, cls, natives, JavaInt(natives.count))
 }
 """
     ]
@@ -279,6 +280,8 @@ extension TypeSyntax {
 
 
 extension IdentifierTypeSyntax: JavaMappedTypeSyntax {
+  var isVoid: Bool { name.text == "Void" }
+
   var isPrimitive: Bool {
     switch self.name.text {
     case "Void", "Bool", "Int", "Int64", "Int32", "Int16", "Int8", "Float", "Double": true
@@ -321,7 +324,7 @@ extension IdentifierTypeSyntax: JavaMappedTypeSyntax {
 
   func fromJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
     if isPrimitive {
-      if primitivesAsObjects {
+      if primitivesAsObjects && !isVoid {
         let _expr = "(\(expr) as \(name.text).PrimitiveType).value"
         return (name.text == "Int" ? "Int(\(_expr))" : _expr, [])
 
