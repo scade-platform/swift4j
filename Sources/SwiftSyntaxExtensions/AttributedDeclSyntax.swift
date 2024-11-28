@@ -7,8 +7,10 @@ public protocol AttributedDeclSyntax: DeclSyntaxProtocol {
 
 
 extension AttributedDeclSyntax {
+  public var isExported: Bool { !hasAttribute(name: "nonjvm") }
+
   public func hasAttribute(name: String) -> Bool {
-    self.attributes.contains {
+    attributes.contains {
       guard case .attribute(let attr) = $0,
             let attrName = attr.attributeName.as(IdentifierTypeSyntax.self)?.name.text else {
               return false
@@ -19,5 +21,16 @@ extension AttributedDeclSyntax {
 }
 
 
-extension ClassDeclSyntax: AttributedDeclSyntax {}
-extension FunctionDeclSyntax: AttributedDeclSyntax {}
+extension ClassDeclSyntax: AttributedDeclSyntax {
+  public var isExported: Bool { hasAttribute(name: "jvm") }
+}
+
+extension FunctionDeclSyntax: AttributedDeclSyntax {
+  public var isStatic: Bool {
+    modifiers.contains {
+      $0.name.text == "static"
+    }
+  }
+}
+
+extension InitializerDeclSyntax: AttributedDeclSyntax {}

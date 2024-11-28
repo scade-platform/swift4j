@@ -10,12 +10,20 @@ class ProxyGenerator: SyntaxVisitor {
     var imports: Set<String> = []
     var nestedClasses: Set<String> = []
   }
+  
+  struct GeneratorSettings {
+    let javaVersion: Int
+  }
 
   private let package: String
+  private let settings: GeneratorSettings
+
   private var classGens: [ClassGenerator] = []
 
-  init(package: String) {
+  init(package: String, javaVersion: Int) {
     self.package = package
+    self.settings = GeneratorSettings(javaVersion: javaVersion)
+
     super.init(viewMode: .fixedUp)
   }
 
@@ -30,8 +38,8 @@ class ProxyGenerator: SyntaxVisitor {
   }
 
   override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
-    if node.hasAttribute(name: "exported")  {
-      classGens.append(ClassGenerator(node))
+    if node.isExported  {
+      classGens.append(ClassGenerator(node, settings: settings))
     }
     return .skipChildren
   }
@@ -40,12 +48,18 @@ class ProxyGenerator: SyntaxVisitor {
     var ctx = Context()
 
     let classDecl = classGen.generate(with: &ctx)
+    
+    var imports = [String](ctx.imports)
+
+    if settings.javaVersion >= 9 {
+      imports.append("java.lang.ref.Cleaner")
+    }
 
     return
 """
 package \(self.package);
 
-\(ctx.imports.map{"import \($0);"}.joined(separator: "\n"))
+\(imports.map{"import \($0);"}.joined(separator: "\n"))
 
 \(classDecl)
 """
@@ -63,38 +77,80 @@ class ClassGenerator: SyntaxVisitor {
   typealias Context = ProxyGenerator.Context
 
   private let classDecl: ClassDeclSyntax
+  private let settings: ProxyGenerator.GeneratorSettings
 
-  private var methodsGens: [MethodGenerator] = []
+  private var ctorGens: [CtorGenerator] = []
+  private var hasCtors: Bool = false
+  private var methodGens: [MethodGenerator] = []
 
   var name: String { classDecl.name.text }
 
-  init(_ classDecl: ClassDeclSyntax) {
+  init(_ classDecl: ClassDeclSyntax, settings: ProxyGenerator.GeneratorSettings) {
     self.classDecl = classDecl
+    self.settings = settings
+
     super.init(viewMode: .fixedUp)
 
     walk(classDecl)
   }
   
   override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-    if node.hasAttribute(name: "exported")  {
-      methodsGens.append(MethodGenerator(node))
+    if node.isExported  {
+      methodGens.append(MethodGenerator(node, className: name))
     }
     return .skipChildren
   }
+  
+  override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
+    if node.isExported  {
+      ctorGens.append(CtorGenerator(node, className: name))
+    }
+    hasCtors = true
+    return .skipChildren
+  }
+
 
   func generate(with ctx: inout Context) -> String {
+    let ctors: String
+    if hasCtors {
+      ctors = ctorGens.enumerated().map{$1.generate(with: &ctx, index: $0)}.joined(separator: "\n\n")
+    } else {
+      ctors =
 """
-public class \(name) {
-  private final long _ptr;
-
-  static {
-    \(name)_class_init(\(name).class);
-  }
-  
   public \(name)() {
     this(\(name).init());
   }
+  private static native long init();
+"""
+    }
+    
+    let std_ctor_dtor: String
+    if settings.javaVersion >= 9 {
+      std_ctor_dtor =
+"""
+  private static final Cleaner cleaner = Cleaner.create();
 
+  private static class Deinit implements Runnable {
+      private final long _ptr;
+
+      Deinit(long ptr) {
+        _ptr = ptr;
+      }
+
+      public void run() {
+        \(name).deinit(_ptr);
+      }
+  }
+
+  private \(name)(long ptr) {
+     _ptr = ptr;
+     cleaner.register(this, new Deinit(_ptr));
+  }
+"""
+
+    } else {
+      std_ctor_dtor =
+"""
   private \(name)(long ptr) {
      _ptr = ptr;
   }
@@ -103,12 +159,26 @@ public class \(name) {
   public void finalize() {
     \(name).deinit(_ptr);
   }
+"""
+    }
 
-  private static native long init();
+    return
+"""
+public class \(name) {
+  static {
+    \(name)_class_init(\(name).class);
+  }
+
+  private final long _ptr;
+
+\(std_ctor_dtor)
+
   private static native void deinit(long ptr);
   private static native void \(name)_class_init(Class<?> cls);
 
-\(methodsGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
+\(ctors)
+
+\(methodGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
 }
 """
   }
@@ -119,37 +189,65 @@ class MethodGenerator {
   typealias Context = ProxyGenerator.Context
 
   private let funcDecl: FunctionDeclSyntax
-  
+  private let className: String
+
   var name: String { funcDecl.name.text }
 
-  init(_ funcDecl: FunctionDeclSyntax) {
+  init(_ funcDecl: FunctionDeclSyntax, className: String) {
     self.funcDecl = funcDecl
+    self.className = className
   }
 
   func generate(with ctx: inout Context) -> String {
-    let params = funcDecl.signature.parameterClause.parameters.map {
-      (name: ($0.secondName ?? $0.firstName).text, type: $0.type.map(with: &ctx))
-    }
-
+    let params = funcDecl.signature.paramsMapping(with: &ctx)
     let retType = funcDecl.signature.returnClause?.type.map(with: &ctx) ?? "void"
 
-    let callParams = ["_ptr"] + params.map{$0.name}
-    
-    var call = "this.\(name)Impl(\(callParams.joined(separator: ", ")))"
+    let callParams = (funcDecl.isStatic ? [] : ["_ptr"]) + params.map{$0.name}
+
+    var call = (funcDecl.isStatic ? className : "this") +  ".\(name)Impl(\(callParams.joined(separator: ", ")))"
     call = funcDecl.signature.returnClause != nil ? "return \(call)" : call
 
     let paramDecls = params.map {"\($0.type) \($0.name)"}
-    let paramDeclsImpl = ["long ptr"] + paramDecls
+    let paramDeclsImpl = (funcDecl.isStatic ? [] : ["long ptr"]) + paramDecls
+    
+    let modifiers = funcDecl.isStatic ? "static" : ""
 
     return
 """
-  public \(retType) \(name)(\(paramDecls.joined(separator: ", "))) {
+  public \(modifiers) \(retType) \(name)(\(paramDecls.joined(separator: ", "))) {
     \(call);
   }
-  private native \(retType) \(name)Impl(\(paramDeclsImpl.joined(separator: ", ")));
+  private \(modifiers) native \(retType) \(name)Impl(\(paramDeclsImpl.joined(separator: ", ")));
 """
   }
 }
+
+
+class CtorGenerator {
+  private let initDecl: InitializerDeclSyntax
+  private let className: String
+
+  init(_ initDecl: InitializerDeclSyntax, className: String) {
+    self.initDecl = initDecl
+    self.className = className
+  }
+
+  func generate(with ctx: inout MethodGenerator.Context, index: Int) -> String {
+    let params = initDecl.signature.paramsMapping(with: &ctx)
+
+    let callParams = params.map { $0.name }.joined(separator: ", ")
+    let paramDecls = params.map { "\($0.type) \($0.name)" }.joined(separator: ", ")
+
+    return
+"""
+  public \(className)(\(paramDecls)) {
+    this(\(className).init\(index)(\(callParams)));
+  }
+  private static native long init\(index)(\(paramDecls));
+"""
+  }
+}
+
 
 
 protocol MappableTypeSyntax: TypeSyntaxProtocol {
@@ -157,12 +255,23 @@ protocol MappableTypeSyntax: TypeSyntaxProtocol {
 }
 
 
-// MARK: TypeSyntax
+// MARK: - Extensions
+
+
+extension FunctionSignatureSyntax {
+  func paramsMapping(with ctx: inout ProxyGenerator.Context) -> [(name: String, type: String)] {
+    parameterClause.parameters.map {
+      (name: ($0.secondName ?? $0.firstName).text, type: $0.type.map(with: &ctx))
+    }
+  }
+}
+
 
 extension TypeSyntax {
   var supportedMappings: [any MappableTypeSyntax.Type] {[
     IdentifierTypeSyntax.self,
-    FunctionTypeSyntax.self
+    FunctionTypeSyntax.self,
+    ArrayTypeSyntax.self
   ]}
 
   func map() -> (any MappableTypeSyntax)? {
@@ -184,11 +293,10 @@ extension TypeSyntax {
 }
 
 
-// MARK: IdentifierTypeSyntax
 
 extension IdentifierTypeSyntax: MappableTypeSyntax {
   func map(with ctx: inout ProxyGenerator.Context, primitivesAsObjects: Bool) -> String {
-    switch self.name.text {
+    switch name.text {
     case "String": "String"
     case "Bool": primitivesAsObjects ? "Boolean" : "boolean"
     case "Int", "Int64": primitivesAsObjects ? "Long" : "long"
@@ -198,12 +306,12 @@ extension IdentifierTypeSyntax: MappableTypeSyntax {
     case "Float": primitivesAsObjects ? "Float" : "float"
     case "Double": primitivesAsObjects ? "Double" : "double"
     case "Void": "void"
-    default: self.name.text
+    default: name.text
     }
   }
 }
 
-// MARK: FunctionTypeSyntax
+
 
 extension FunctionTypeSyntax: MappableTypeSyntax {
   func map(with ctx: inout ProxyGenerator.Context, primitivesAsObjects: Bool) -> String {
@@ -229,3 +337,16 @@ extension FunctionTypeSyntax: MappableTypeSyntax {
     return String(funcType)
   }
 }
+
+
+extension ArrayTypeSyntax: MappableTypeSyntax {
+  func map(with ctx: inout ProxyGenerator.Context, primitivesAsObjects: Bool) -> String {
+    return element.map(with: &ctx, primitivesAsObjects: primitivesAsObjects) + "[]"
+  }
+}
+
+
+
+
+
+

@@ -58,14 +58,14 @@ open class ObjectBase: ObjectProtocol {
 
 extension ObjectBase: Equatable {
   public static func == (lhs: ObjectBase, rhs: ObjectBase) -> Bool {
-    return jni.IsSameObject(env, lhs.javaObject.ptr, rhs.javaObject.ptr) != 0
+    return jni.IsSameObject(lhs.javaObject.ptr, rhs.javaObject.ptr) != 0
   }
 }
 
 
 
 fileprivate func mapJavaObject<T: ObjectProtocol>(_ obj: JavaObject) -> T {
-  guard let jcls = jni.GetObjectClass(env, obj) else {
+  guard let jcls = jni.GetObjectClass(obj) else {
     fatalError("Cannot get Java class from Java object")
   }
 

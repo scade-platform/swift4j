@@ -25,8 +25,13 @@ let package = Package(
     targets: [
         .systemLibrary(name: "CJNI"),
         
+        .target(name: "CAndroid"),
+
         .target(name: "Java",
-                dependencies: ["CJNI"]),
+                dependencies: [
+                  "CJNI",
+                  .target(name: "CAndroid", condition: .when(platforms: [.android])),
+                ]),
 
         .target(name: "SwiftSyntaxExtensions",
                 dependencies: [
@@ -65,15 +70,6 @@ let package = Package(
                   permissions: []),
                 dependencies: ["swift4j"]
                )
-
-/*
-        .testTarget(name: "SwiftJavaTests",
-              dependencies: [
-                  "SwiftJavaMacros",
-                  .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
-              ]
-          )
-*/
     ]
 )
 

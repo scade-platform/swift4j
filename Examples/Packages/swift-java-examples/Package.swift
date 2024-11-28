@@ -26,7 +26,7 @@ let package = Package(
         .target(
             name: "swift-java-examples",
             dependencies: [
-              .product(name: "SwiftJava", package: "swift-java"),              
+              .product(name: "SwiftJava", package: "swift-java")              
             ]
         )
     ]

@@ -1,7 +1,6 @@
 package com.example.swiftandroidexample
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,17 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.swiftandroidexample.ui.theme.SwiftAndroidExampleTheme
 
-import swift_java_examples.Service
+import swift_java_examples.GreetingService
 
 class MainActivity : ComponentActivity() {
-    private val greetingText = mutableStateOf("Android")
+    private val greetingText = mutableStateOf("Greeting message")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // TEMPORARILY DISABLED
-        // TDB: should be initialized from a companion "swift-java" library published as a Gradle dependency
-        // initSwiftFoundation()
 
         enableEdgeToEdge()
         setContent {
@@ -39,29 +34,26 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+
+        // ----- Calling swift-examples demo
         System.loadLibrary("swift-java-examples")
 
-        val srv = Service()
-        srv.request { resp ->
-            greetingText.value = resp.message
+        val foo = swift_java_examples.Greeting("Foo")
+        greetingText.value = foo.message
+
+        val greetings = GreetingService()
+        greetings.greetAsync("Android", 2) {
+            greetingText.value = it.message
         }
+        // -----------------------------------
+
     }
-
-
-    private fun initSwiftFoundation(){
-        try {
-            //org.swift.swiftfoundation.SwiftFoundation.Initialize(this, false)
-        } catch (err: Exception) {
-            Log.e("Swift", "Can't initialize Swift Foundation: $err")
-        }
-    }
-
 
     @Composable
     fun Greeting(modifier: Modifier = Modifier) {
         val text by greetingText
         Text(
-            text = "Hello $text!",
+            text = "$text!",
             modifier = modifier
         )
     }

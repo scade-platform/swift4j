@@ -1,0 +1,4 @@
+module CAndroid {
+  header "android.h"
+  export *
+}

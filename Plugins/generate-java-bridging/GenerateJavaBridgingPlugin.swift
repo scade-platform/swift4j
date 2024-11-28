@@ -19,12 +19,19 @@ struct GenerateJavaBridgingPlugin: CommandPlugin {
     for prod in products  {
       try sourceModules(from: prod).forEach {
         print("Generating bridging for '\($0.moduleName)'...")
-        try generate(for: $0, with: toolPath, to: outputDir.appending(prod.name))
+        try generate(for: $0, 
+                     with: toolPath,
+                     to: outputDir.appending(prod.name),
+                     forwardArgs: argExtractor.remainingArguments)
       }
     }
   }
 
-  private func generate(for sourceModule: any SourceModuleTarget, with toolPath: URL, to outputDir: PackagePlugin.Path) throws {
+  private func generate(for sourceModule: any SourceModuleTarget, 
+                        with toolPath: URL,
+                        to outputDir: PackagePlugin.Path,
+                        forwardArgs args: [String]) throws {
+
     let pkgName = sourceModule.name.replacingOccurrences(of: "-", with: "_")
     let outPath = outputDir.appending(["main", "java"]).string
 
@@ -33,11 +40,12 @@ struct GenerateJavaBridgingPlugin: CommandPlugin {
     }
 
     try FileManager.default.createDirectory(at: URL(filePath: outPath), withIntermediateDirectories: true)
+    
+    let arguments = args
+      + ["-o", outPath, "--package", pkgName]
+      + sourceModule.sourceFiles.map{ $0.path.string }.filter{$0.hasSuffix(".swift")}
 
-    try Process.run(toolPath, arguments: [
-      "-o", outPath,
-      "--package", pkgName
-    ] + sourceModule.sourceFiles.map{ $0.path.string }.filter{$0.hasSuffix(".swift")})
+    try Process.run(toolPath, arguments: arguments)
   }
 
   private func sourceModules(from product: any Product) -> [any SourceModuleTarget] {

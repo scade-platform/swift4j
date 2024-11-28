@@ -13,18 +13,18 @@ public class JObject {
   public let weak: Bool
 
   public lazy var cls: JClass = {
-    let obj = jni.CallObjectMethod(env, ptr, Object__getClass, [])!
+    let obj = jni.CallObjectMethod(ptr, Object__getClass, [])!
     return JClass(obj)
   }()
   
   public init(_ ptr: JavaObject, weak: Bool = false) {
-    self.ptr = weak ? ptr : jni.NewGlobalRef(env, ptr)!
+    self.ptr = weak ? ptr : jni.NewGlobalRef(ptr)!
     self.weak = weak
   }
     
   deinit {
     if self.weak {
-      jni.DeleteGlobalRef(env, self.ptr)
+      jni.DeleteGlobalRef(self.ptr)
     }
   }
   
@@ -64,7 +64,7 @@ public class JObject {
 
 
   public func call(method: JavaMethodID, _ args : [JavaParameter]) -> Void {
-    jni.CallVoidMethod(env, ptr, method, args)
+    jni.CallVoidMethod(ptr, method, args)
   }
   
   public func call(method: String, sig: String, _ args : [JavaParameter]) -> Void {
@@ -120,7 +120,7 @@ public class JObject {
 
 
 
-fileprivate let Object__class = JClass(jni.FindClass(env, "java/lang/Object")!)
+fileprivate let Object__class = JClass(jni.FindClass("java/lang/Object")!)
 fileprivate let Object__getClass = Object__class.getMethodID(name: "getClass", sig: "()Ljava/lang/Class;")!
 
 //fileprivate let Object__hashcode = jni.GetMethodID(env, Object__class, "hashCode", "()I")!

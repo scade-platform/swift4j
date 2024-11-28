@@ -25,8 +25,8 @@ public final class JClass : JObject {
   }
 
   public convenience init?(fqn: String) {
-    guard let jcls = jni.FindClass(env, fqn) else {
-      checkExceptionAndClear()
+    guard let jcls = jni.FindClass(fqn) else {
+      jni.checkExceptionAndClear()
       return nil
     }
 
@@ -34,20 +34,18 @@ public final class JClass : JObject {
     self._fqn = fqn
   }
 
-
-
   public func getFieldID(name: String, sig: String) -> JavaFieldID? {
     defer {
-      checkExceptionAndClear()
+      jni.checkExceptionAndClear()
     }
-    return jni.GetFieldID(env, self.ptr, name, sig)
+    return jni.GetFieldID(self.ptr, name, sig)
   }
   
   public func getStaticFieldID(name: String, sig: String) -> JavaFieldID? {
     defer {
-      checkExceptionAndClear()
+      jni.checkExceptionAndClear()
     }
-    return jni.GetStaticFieldID(env, self.ptr, name, sig)
+    return jni.GetStaticFieldID(self.ptr, name, sig)
   }
   
   
@@ -55,22 +53,22 @@ public final class JClass : JObject {
   
   public func getMethodID(name: String, sig: String)  -> JavaMethodID? {
     defer {
-      checkExceptionAndClear()
-    }    
-    return jni.GetMethodID(env, self.ptr, name, sig)
+      jni.checkExceptionAndClear()
+    }
+    return jni.GetMethodID(self.ptr, name, sig)
   }
   
   public func getStaticMethodID(name: String, sig: String)  -> JavaMethodID? {
     defer {
-      checkExceptionAndClear()
+      jni.checkExceptionAndClear()
     }
-    return jni.GetStaticMethodID(env, self.ptr, name, sig)
+    return jni.GetStaticMethodID(self.ptr, name, sig)
   }
   
   
   
   public func create(ctor: JavaMethodID, _ args: [JavaParameter]) -> JavaObject {
-    guard let obj = jni.NewObject(env, self.ptr, ctor, args) else {
+    guard let obj = jni.NewObject(self.ptr, ctor, args) else {
       //TODO: check and output exception
       fatalError("Cannot instantiate Java object")
     }
@@ -131,7 +129,7 @@ public final class JClass : JObject {
   
   
   public func callStatic(method: JavaMethodID, _ args : [JavaParameter]) -> Void {
-    jni.CallStaticVoidMethodA(env, self.ptr, method, args)
+    jni.CallStaticVoidMethod(self.ptr, method, args)
   }
 
   public func callStatic(method: JavaMethodID, _ args : JParameterConvertible...) -> Void {
@@ -193,12 +191,12 @@ public final class JClass : JObject {
   // Natives
 
   public func registerNatives(_ natives: JNINativeMethod...) throws {
-    let _ = jni.RegisterNatives(env, self.ptr, natives, JavaInt(natives.count))
-    try checkExceptionAndThrow()
+    let _ = jni.RegisterNatives(self.ptr, natives)
+    try jni.checkExceptionAndThrow()
   }
   
   public func unregisterNatives() {
-    let _ = jni.UnregisterNatives(env, self.ptr)
+    let _ = jni.UnregisterNatives(self.ptr)
   }
   
 }

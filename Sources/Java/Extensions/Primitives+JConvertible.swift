@@ -74,27 +74,27 @@ extension Bool: JPrimitiveConvertible {
   public static let javaSignature = "Z"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Bool {
-    return jni.CallBooleanMethod(env, obj, method, args) == JNI_TRUE
+    return jni.CallBooleanMethod(obj, method, args) == JNI_TRUE
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Bool {
-    return jni.CallStaticBooleanMethodA(env, cls, method, args) == JNI_TRUE
+    return jni.CallStaticBooleanMethod(cls, method, args) == JNI_TRUE
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Bool {
-    return jni.GetBooleanField(env, obj, field) == JNI_TRUE
+    return jni.GetBooleanField(obj, field) == JNI_TRUE
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) -> Void {
-    jni.SetBooleanField(env, obj, field, (self) ? 1 : 0)
+    jni.SetBooleanField(obj, field, (self) ? 1 : 0)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Bool {
-    return jni.GetStaticBooleanField(env, cls, field) == JNI_TRUE
+    return jni.GetStaticBooleanField(cls, field) == JNI_TRUE
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Void {
-    jni.SetBooleanField(env, cls, field, (self) ? 1 : 0)
+    jni.SetBooleanField(cls, field, (self) ? 1 : 0)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -124,27 +124,27 @@ extension Int8: JPrimitiveConvertible {
   public static let javaSignature = "B"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Int8 {
-    return jni.CallByteMethod(env, obj, method, args)
+    return jni.CallByteMethod(obj, method, args)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Int8 {
-    return jni.CallStaticByteMethodA(env, cls, method, args)
+    return jni.CallStaticByteMethod(cls, method, args)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Int8 {
-    return jni.GetByteField(env, obj, field)
+    return jni.GetByteField(obj, field)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) {
-    jni.SetByteField(env, obj, field, self)
+    jni.SetByteField(obj, field, self)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Int8 {
-    return jni.GetStaticByteField(env, cls, field)
+    return jni.GetStaticByteField(cls, field)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
-    jni.SetStaticByteField(env, cls, field, self)
+    jni.SetStaticByteField(cls, field, self)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -173,27 +173,27 @@ extension UInt16: JPrimitiveConvertible {
   public static let javaSignature = "C"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> UInt16 {
-    return jni.CallCharMethod(env, obj, method, args)
+    return jni.CallCharMethod(obj, method, args)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> UInt16 {
-    return jni.CallStaticCharMethodA(env, cls, method, args)
+    return jni.CallStaticCharMethod(cls, method, args)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> UInt16 {
-    return jni.GetCharField(env, obj, field)
+    return jni.GetCharField(obj, field)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) {
-    jni.SetCharField(env, obj, field, self)
+    jni.SetCharField(obj, field, self)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> UInt16 {
-    return jni.GetStaticCharField(env, cls, field)
+    return jni.GetStaticCharField(cls, field)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
-    jni.SetStaticCharField(env, cls, field, self)
+    jni.SetStaticCharField(cls, field, self)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -222,27 +222,27 @@ extension Int16: JPrimitiveConvertible {
   public static let javaSignature = "S"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Int16 {
-    return jni.CallShortMethod(env, obj, method, args)
+    return jni.CallShortMethod(obj, method, args)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Int16 {
-    return jni.CallStaticShortMethodA(env, cls, method, args)
+    return jni.CallStaticShortMethod(cls, method, args)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Int16 {
-    return jni.GetShortField(env, obj, field)
+    return jni.GetShortField(obj, field)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) {
-    jni.SetShortField(env, obj, field, self)
+    jni.SetShortField(obj, field, self)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Int16 {
-    return jni.GetStaticShortField(env, cls, field)
+    return jni.GetStaticShortField(cls, field)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
-    jni.SetStaticShortField(env, cls, field, self)
+    jni.SetStaticShortField(cls, field, self)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -272,27 +272,27 @@ extension Int32: JPrimitiveConvertible {
   public static let javaSignature = "I"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Int32 {
-    return jni.CallIntMethod(env, obj, method, args)
+    return jni.CallIntMethod(obj, method, args)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Int32 {
-    return jni.CallStaticIntMethodA(env, cls, method, args)
+    return jni.CallStaticIntMethod(cls, method, args)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Int32 {
-    return jni.GetIntField(env, obj, field)
+    return jni.GetIntField(obj, field)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) {
-    jni.SetIntField(env, obj, field, self)
+    jni.SetIntField(obj, field, self)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Int32 {
-    return jni.GetStaticIntField(env, cls, field)
+    return jni.GetStaticIntField(cls, field)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
-    jni.SetStaticIntField(env, cls, field, self)
+    jni.SetStaticIntField(cls, field, self)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -322,27 +322,27 @@ extension Int64: JPrimitiveConvertible {
   public static let javaSignature = "J"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Int64 {
-    return jni.CallLongMethod(env, obj, method, args)
+    return jni.CallLongMethod(obj, method, args)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Int64 {
-    return jni.CallStaticLongMethodA(env, cls, method, args)
+    return jni.CallStaticLongMethod(cls, method, args)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Int64 {
-    return jni.GetLongField(env, obj, field)
+    return jni.GetLongField(obj, field)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) {
-    jni.SetLongField(env, obj, field, self)
+    jni.SetLongField(obj, field, self)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Int64 {
-    return jni.GetStaticLongField(env, cls, field)
+    return jni.GetStaticLongField(cls, field)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
-    jni.SetStaticLongField(env, cls, field, self)
+    jni.SetStaticLongField(cls, field, self)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -422,27 +422,27 @@ extension Float: JPrimitiveConvertible {
   public static let javaSignature = "F"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Float {
-    return jni.CallFloatMethod(env, obj, method, args)
+    return jni.CallFloatMethod(obj, method, args)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Float {
-    return jni.CallStaticFloatMethodA(env, cls, method, args)
+    return jni.CallStaticFloatMethod(cls, method, args)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Float {
-    return jni.GetFloatField(env, obj, field)
+    return jni.GetFloatField(obj, field)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) {
-    jni.SetFloatField(env, obj, field, self)
+    jni.SetFloatField(obj, field, self)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Float {
-    return jni.GetStaticFloatField(env, cls, field)
+    return jni.GetStaticFloatField(cls, field)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
-    jni.SetStaticFloatField(env, cls, field, self)
+    jni.SetStaticFloatField(cls, field, self)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -471,27 +471,27 @@ extension Double: JPrimitiveConvertible {
   public static let javaSignature = "D"
   
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Double {
-    return jni.CallDoubleMethod(env, obj, method, args)
+    return jni.CallDoubleMethod(obj, method, args)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Double {
-    return jni.CallStaticDoubleMethodA(env, cls, method, args)
+    return jni.CallStaticDoubleMethod(cls, method, args)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Double {
-    return jni.GetDoubleField(env, obj, field)
+    return jni.GetDoubleField(obj, field)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) {
-    jni.SetDoubleField(env, obj, field, self)
+    jni.SetDoubleField(obj, field, self)
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Double {
-    return jni.GetStaticDoubleField(env, cls, field)
+    return jni.GetStaticDoubleField(cls, field)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
-    jni.SetStaticDoubleField(env, cls, field, self)
+    jni.SetStaticDoubleField(cls, field, self)
   }
   
   public func toJavaParameter() -> JavaParameter {
@@ -511,14 +511,14 @@ extension String: JObjectConvertible, JNullInitializable {
   }
   
   public static func fromJavaObject(_ obj: JavaObject) -> String {
-    let chars = jni.GetStringUTFChars(env, obj, nil)
+    let chars = jni.GetStringUTFChars(obj)
     let ret = String(cString: chars)
-    jni.ReleaseStringUTFChars(env, obj, chars)
+    jni.ReleaseStringUTFChars(obj, chars)
     return ret
   }
   
   public func toJavaObject() -> JavaObject? {
-    return jni.NewStringUTF(env, self)
+    return jni.NewStringUTF(self)
   }
 }
 

@@ -22,4 +22,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "SwiftExamples"
-include ':app'
+include(":app")

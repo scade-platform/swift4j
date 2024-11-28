@@ -7,6 +7,8 @@ public extension FunctionTypeSyntax {
     }
     return retType == "Void"
   }
+  
+  
 
   var javaFunctionalInterface: String {
     switch parameters.count {

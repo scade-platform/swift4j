@@ -65,34 +65,34 @@ extension JObjectConvertible {
   }
 
   public static func fromMethod(_ method: JavaMethodID, on obj: JavaObject, args: [JavaParameter]) -> Self {
-    let ret = jni.CallObjectMethod(env, obj, method, args)
+    let ret = jni.CallObjectMethod(obj, method, args)
     
-    checkExceptionAndClear()
-    
+    jni.checkExceptionAndClear()
+
     return fromJavaObject(ret)
   }
   
   public static func fromStaticMethod(_ method: JavaMethodID, on cls: JavaClass, args: [JavaParameter]) -> Self {
-    let ret = jni.CallStaticObjectMethodA(env, cls, method, args)
+    let ret = jni.CallStaticObjectMethod(cls, method, args)
     return fromJavaObject(ret)
   }
   
   public static func fromField(_ field: JavaFieldID, of obj: JavaObject) -> Self {
-    let ret = jni.GetObjectField(env, obj, field)
+    let ret = jni.GetObjectField(obj, field)
     return fromJavaObject(ret)
   }
   
   public func toField(_ field: JavaFieldID, of obj: JavaObject) -> Void {
-    jni.SetObjectField(env, obj, field, toJavaObject())
+    jni.SetObjectField(obj, field, toJavaObject())
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Self {
-    let ret = jni.GetStaticObjectField(env, cls, field)
+    let ret = jni.GetStaticObjectField(cls, field)
     return fromJavaObject(ret)
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Void {
-    jni.SetStaticObjectField(env, cls, field, toJavaObject())
+    jni.SetStaticObjectField(cls, field, toJavaObject())
   }
   
 //  public static func toJavaArray(_ arr: [Self]) -> JavaArray? {

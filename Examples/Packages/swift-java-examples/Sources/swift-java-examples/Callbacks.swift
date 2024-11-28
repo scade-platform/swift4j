@@ -1,18 +1,31 @@
 import SwiftJava
 
 
-@exported(.android)
-public class Response {
-  @exported
-  func getMessage() -> String { "Swift" }
-}
+@jvm public class GreetingService {
+  func greet(name: String, _ response: (Greeting) -> Void) {
+    
+    let greeting = Greeting(name: name)
+    response(greeting)
 
-@exported(.android)
-public class Service {
-  @exported
-  func request(_ response: (Response) -> Void) {
-    let resp = Response()
-    response(resp)
   }
 
+  func greetAsync(name: String, delayInSeconds: Int, _ response: (Greeting) -> Void) async {
+    
+    try? await Task.sleep(nanoseconds: UInt64(delayInSeconds*1_000_000_000))
+
+    let greeting = Greeting(name: name)
+    response(greeting)
+  }
+}
+
+
+
+@jvm public class Greeting {
+  let name: String
+
+  init(name: String) {
+    self.name = name
+  }
+
+  func getMessage() -> String { "Swift runtime is greeting \(name)" }
 }

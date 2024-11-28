@@ -10,6 +10,10 @@ struct Swift4jCommand: ParsableCommand {
   @Option(name: .long,
           help: "Java package name")
   var package: String
+  
+  @Option(name: .long,
+          help: "Java version")
+  var javaVersion: Int = 11
 
   @Argument(help: "Input filenames.")
   var paths: [String] = []
@@ -45,7 +49,7 @@ struct Swift4jCommand: ParsableCommand {
 
 
   mutating func run() throws {
-    let generator = ProxyGenerator(package: package)
+    let generator = ProxyGenerator(package: package, javaVersion: javaVersion)
 
     for p in paths {
       for res in try generator.run(path: p) {
