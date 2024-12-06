@@ -11,7 +11,7 @@ The **swift4j** packages contains of a set of libraries and tools drastically si
 - `Sources/swift4j` - CLI tool generating the Java bridging code on the Java side 
 - `Plugins/generate-java-bridging` - SPM command line plugin around the CLI tool 
 
-The main goal of the **swift4j** package is to annotate the Swift code and generate bridgings for the Swift/JVM interoperability. In order to simplify the integration into the native Java/Kotlin development enviroments there are two **[SwiftPM Gradle plugins]([GitHub - scade-platform/spm-gradle-plugin: Swift Package Manager Plugin for Gradle](https://github.com/scade-platform/spm-gradle-plugin))**:
+The main goal of the **swift4j** package is to annotate the Swift code and generate bridgings for the Swift/JVM interoperability. In order to simplify the integration into the native Java/Kotlin development enviroments there are two [SwiftPM Gradle](https://github.com/scade-platform/spm-gradle-plugin) plugins:
 
 * `io.scade.gradle.plugins.swiftpm` - for generic Java/Kotlin projects  
 
@@ -19,7 +19,7 @@ The main goal of the **swift4j** package is to annotate the Swift code and gener
 
 For more details on plugins configuration please refer to the plugin's [README](https://github.com/scade-platform/spm-gradle-plugin/blob/main/README.md)
 
-The **SwiftPM Plugin for Android** takes care of the installation of the [Swift Toolchain for Android](https://github.com/scade-platform/swift-android-toolchain) that allows to compile Swift code for the Android platform as well as packaging all required parts into a ready to use application. For more details, please follow the [Usage](#usage) section or take a look at [Switf4j Examples]([GitHub - scade-platform/swift4j-examples: Usage examples of the Swift4j Toolkit](https://github.com/scade-platform/swift4j-examples)).   
+The **SwiftPM Plugin for Android** takes care of the installation of the [Swift Toolchain for Android](https://github.com/scade-platform/swift-android-toolchain) that allows to compile Swift code for the Android platform as well as packaging all required parts into a ready to use application. For more details, please follow the [Usage](#usage) section or take a look at [swift4j-examples](https://github.com/scade-platform/swift4j-examples).   
 
 ## Getting Started
 
@@ -94,7 +94,7 @@ In this case the type `Person` used in the `greet` method's signature is not exp
 
 #### Call Swift code from Java/Kotlin
 
-The easiest way to integrate the exposed Swift code into the Java/Kotlin projects is to use one of the **[SwiftPM Gradle plugins]([GitHub - scade-platform/spm-gradle-plugin: Swift Package Manager Plugin for Gradle](https://github.com/scade-platform/spm-gradle-plugin))** depending on the target platform. 
+The easiest way to integrate the exposed Swift code into the Java/Kotlin projects is to use one of the [SwiftPM Gradle](https://github.com/scade-platform/spm-gradle-plugin) plugins depending on the target platform.
 
 For example, in order to use the exposed Swift code in an Android application, just add the `io.scade.gradle.plugins.android.swiftpm` plugin to your `build.gradle.kts` file:    
 
@@ -168,8 +168,7 @@ The following class members are supported if and only if its signatures only con
   
 ## Examples
 
-[Switf4j Examples]([GitHub - scade-platform/swift4j-examples: Usage examples of the Swift4j Toolkit](https://github.com/scade-platform/swift4j-examples.git)) 
-
+[swift4j-examples](https://github.com/scade-platform/swift4j-examples) 
 
 ## License
 
