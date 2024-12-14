@@ -17,7 +17,7 @@ public enum Platform: Equatable {
             named(deinit_jni),
             arbitrary)
 public macro jvm() =
-  #externalMacro(module: "SwiftJavaMacros", type: "JavaClassMacro")
+  #externalMacro(module: "Swift4jMacros", type: "JavaClassMacro")
 
 /*
 public macro jvm(_ platforms: Platform...,
@@ -27,4 +27,4 @@ public macro jvm(_ platforms: Platform...,
 
 @attached(peer)
 public macro nonjvm() =
-  #externalMacro(module: "SwiftJavaMacros", type: "JavaMethodMacro")
+  #externalMacro(module: "Swift4jMacros", type: "JavaMethodMacro")

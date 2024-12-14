@@ -72,13 +72,13 @@ let package = Package(
 )
 ```
 
-Now, we can add a target dependency on the **SwiftJava** product from the **swift4j** package to all targets in our `Package.swift` file that are going to be exposed to Java/Kotlin. For example to expose a *swift4j-examples* target, do the following:
+Now, we can add a target dependency on the **Swift4j** product from the **swift4j** package to all targets in our `Package.swift` file that are going to be exposed to Java/Kotlin. For example to expose a *swift4j-examples* target, do the following:
 
 ```swift
 .target(
   name: "swift4j-examples",
   dependencies: [
-    .product(name: "SwiftJava", package: "swift4j")              
+    .product(name: "Swift4j", package: "swift4j")              
   ]
 )
 ```
@@ -88,7 +88,7 @@ Now, we can add a target dependency on the **SwiftJava** product from the **swif
 After that we can annotate our code using Swift macro `@jvm`. For example:
 
 ```swift
-import SwiftJava // import @jvm macro and supporting types 
+import Swift4j // import @jvm macro and supporting types 
 
 // @jvm automatically exposes the annoted class together with
 // all methods that can be exposed
@@ -166,14 +166,14 @@ In the code snippet above the exposed class imported from the package named by t
 
 #### Generate bridgings manually (without Gradle plugins)
 
-It is also possible to generate Java bridgings without the SwiftPM Gradle plugins using either the *swift4j* CLI tool or the Swift package command line plugin. Both are included in the *swift4j* package.
+It is also possible to generate Java bridgings without the SwiftPM Gradle plugins using either the *swift4j-cli* CLI tool or the Swift package command line plugin. Both are included in the *swift4j* package.
 
 **NOTE:** the CLI tool generates bridgings from Swift files only while the SPM plugin generates for the whole product  
 
 To generate bridgings using the CLI tool, execute the following command:
 
 ```shell
-swift4j --package <JAVA_PACKAGE> --java-version <JAVA_VERSION> -o <OUTPUT_FOLDER> <INPUT SWIFT FILES>
+swift4j-cli --package <JAVA_PACKAGE> --java-version <JAVA_VERSION> -o <OUTPUT_FOLDER> <INPUT SWIFT FILES>
 ```
 
 Parameters:

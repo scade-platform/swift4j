@@ -9,9 +9,9 @@ let package = Package(
 
     products: [
         .library(name: "Java", type: .static, targets: ["Java"]),
-        .library(name: "SwiftJava", targets: ["SwiftJava"]),
-        
-        .executable(name: "swift4j", targets: ["swift4j"]),
+        .library(name: "Swift4j", targets: ["Swift4j"]),
+
+        .executable(name: "swift4j-cli", targets: ["swift4j-cli"]),
 
         .plugin(name: "swift4j-plugin", targets: ["swift4j-plugin"]),
         .plugin(name: "generate-java-bridging", targets: ["generate-java-bridging"])
@@ -38,20 +38,20 @@ let package = Package(
                   .product(name: "SwiftSyntax", package: "swift-syntax")
                 ]),
 
-        .macro(name: "SwiftJavaMacros",
+        .macro(name: "Swift4jMacros",
                dependencies: [
                   "SwiftSyntaxExtensions",
                    .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                    .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
                ]),
 
-        .target(name: "SwiftJava", 
+        .target(name: "Swift4j",
                 dependencies: [
                   "Java",
-                  "SwiftJavaMacros"
+                  "Swift4jMacros"
                 ]),
 
-        .executableTarget(name: "swift4j",
+        .executableTarget(name: "swift4j-cli",
                          dependencies: [
                           "SwiftSyntaxExtensions",
                           .product(name: "ArgumentParser", package: "swift-argument-parser"),
@@ -60,7 +60,7 @@ let package = Package(
 
         .plugin(name: "swift4j-plugin",
                 capability: .buildTool(),
-                dependencies: ["swift4j"]),
+                dependencies: ["swift4j-cli"]),
 
         
         .plugin(name: "generate-java-bridging",
@@ -68,7 +68,7 @@ let package = Package(
                   intent: .custom(verb: "generate-java-bridging",
                                   description: "Generate Java bridging proxies for the Swift classes"),
                   permissions: []),
-                dependencies: ["swift4j"]
+                dependencies: ["swift4j-cli"]
                )
     ]
 )

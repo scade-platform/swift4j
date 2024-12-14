@@ -6,7 +6,7 @@ import Foundation
 @main
 struct GenerateJavaBridgingPlugin: CommandPlugin {
   func performCommand(context: PluginContext, arguments: [String]) throws {
-    let toolPath = try URL(filePath: context.tool(named: "swift4j").path.string)
+    let toolPath = try URL(filePath: context.tool(named: "swift4j-cli").path.string)
     let outputDir = context.pluginWorkDirectory
 
     var argExtractor = ArgumentExtractor(arguments)
