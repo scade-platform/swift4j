@@ -2,14 +2,34 @@
 
 The **swift4j** toolkit is a set of libraries and tools making possible a seamless interoperability between Swift and Java/Kotlin. Besides the **swift4j** Swift package presented in this repository there are also a set of Gradle plugins and the Swift Toolchain for Android allowing smooth integration of the Swift libraries into the desktop and mobile applications written in Java/Kotlin.       
 
+## Quick Example
+
+Using the *swift4j* Toolkit we can access, for example, the following Swift class:
+
+```swift
+@jvm class Arrays {
+  static func mapReversed(_ arr: [Int], mapping: (Int) -> Int) -> [Int] {
+    return arr.reversed().map(mapping)
+  } 
+}
+
+```
+
+from Kotlin:
+
+
+```kotlin
+val arr = longArrayOf(1, 2, 3)
+Arrays.mapReversed(arr) {
+  it + 1
+}
+```
+
+by just adding a single `@jvm` annotation to the Swift class. 
+
 ## Description
 
-The **swift4j** packages contains of a set of libraries and tools drastically simplifying interoperability between Swift and JVM. The central part of the package is built around the Swift macro system and the Swift package plugins, both are based on the library abstracting away the details of the Java Native Interfaces (JNI), that is used for the communication between JVM and the native code. The structure of the package is as following:
-
-- `Sources/CJNI` and `Sources/Java` - abstraction layer over the JNI
-- `Sources/SwiftJava` and `Sources/SwiftJavaMacros` - macros generating the bridging code on the Swift side
-- `Sources/swift4j` - CLI tool generating the Java bridging code on the Java side 
-- `Plugins/generate-java-bridging` - SPM command line plugin around the CLI tool 
+The **swift4j** packages contains of a set of libraries and tools drastically simplifying interoperability between Swift and JVM. The central part of the package is built around the Swift macro system and the Swift package plugins, both are based on the library abstracting away the details of the Java Native Interfaces (JNI), that is used for the communication between JVM and the native code. 
 
 The main goal of the **swift4j** package is to annotate the Swift code and generate bridgings for the Swift/JVM interoperability. In order to simplify the integration into the native Java/Kotlin development enviroments there are two [SwiftPM Gradle](https://github.com/scade-platform/spm-gradle-plugin) plugins:
 
@@ -17,16 +37,23 @@ The main goal of the **swift4j** package is to annotate the Swift code and gener
 
 * `io.scade.gradle.plugins.android.swiftpm` - for Java/Kotlin projects on the Android platform
 
+The **SwiftPM Gradle** plugin for Android takes care of the installation of the [Swift for Android](https://github.com/scade-platform/swift-android-toolchain) that allows to compile Swift code for the Android platform as well as packaging all required parts into a ready to use application. For more details, please follow the [Usage](#usage) section or take a look at [swift4j-examples](https://github.com/scade-platform/swift4j-examples).   
+
 For more details on plugins configuration please refer to the plugin's [README](https://github.com/scade-platform/spm-gradle-plugin/blob/main/README.md)
 
-The **SwiftPM Plugin for Android** takes care of the installation of the [Swift Toolchain for Android](https://github.com/scade-platform/swift-android-toolchain) that allows to compile Swift code for the Android platform as well as packaging all required parts into a ready to use application. For more details, please follow the [Usage](#usage) section or take a look at [swift4j-examples](https://github.com/scade-platform/swift4j-examples).   
 
 ## Getting Started
 
 ### Prerequisites
 
-TBD
+- macOS, Linux
+	- Swift >= 5.9
+	- Java >= 1.8
 
+- Android
+	- NDK 25.x (can be installed from the Android Studio)
+	- [Swift for Android](https://github.com/scade-platform/swift-android-toolchain) >= 5.10 (will be installed automatically when used with the SwiftPM Gradle plugin)
+ 
 ### Usage
 
 #### Swift code annotations
@@ -128,7 +155,7 @@ System.loadLibrary("swift4-examples")
 
 // Create an instance of the exposed class 
 val greetings = GreetingService()
-// And call the 'greet' method passing a KotlinlLambda  
+// And call the 'greet' method passing a Kotlin lambda  
 greetings.greet("Android") { resp ->
   print(resp)    
 }
@@ -139,7 +166,36 @@ In the code snippet above the exposed class imported from the package named by t
 
 #### Generate bridgings manually (without Gradle plugins)
 
-TBD
+It is also possible to generate Java bridgings without the SwiftPM Gradle plugins using either the *swift4j* CLI tool or the Swift package command line plugin. Both are included in the *swift4j* package.
+
+**NOTE:** the CLI tool generates bridgings from Swift files only while the SPM plugin generates for the whole product  
+
+To generate bridgings using the CLI tool, execute the following command:
+
+```shell
+swift4j --package <JAVA_PACKAGE> --java-version <JAVA_VERSION> -o <OUTPUT_FOLDER> <INPUT SWIFT FILES>
+```
+
+Parameters:
+	
+- **JAVA_PACKAGE** (required): Java package name for the generated classes
+- **JAVA_VERSION** (optional): Java version the generated source has to be compatible with (default: 11). For Android has to be adjusted depending on the minimal API level
+- **OUTPUT_FOLDER** (optional): Output folder (default: outputs classes to the standart output)	 
+
+To generate bridgings using the SPM package plugin, execute the following command in the folder where your `Package.swift` is located:
+
+```shell
+swift package plugin generate-java-bridging --product <PRODUCT> --java-version <JAVA_VERSION>
+```
+
+Parameters:
+- **PRODUCT** (required): Product name from your package for which the bridgings has to be generated 
+- **JAVA_VERSION** (optional): Same as for the CLI version 
+
+The SPM plugin recursively iterates over all targets of the product and generates bridgings for all classes marked by the `@jvm` macro. It uses a target name as a Java package name for all classes within the target. That's why it does not need a Java package name as an input. The generated classes are written into the Swift package's build folder (default: `.build/plugins/generate-java-bridging/outputs`). For every target a separate folder is created in the output folder.
+
+After the generation, the briging files can be built and used as normal Java sources in any Java/Kotlin project by including them into the source tree. The binary can be built using the standard Swift build process for the target platform and can be then included into the final product.
+
 
 ## Language Features Support
 
@@ -169,6 +225,12 @@ The following class members are supported if and only if its signatures only con
 ## Examples
 
 [swift4j-examples](https://github.com/scade-platform/swift4j-examples) 
+
+
+## Contact
+
+[Join our Discord channel](https://discord.gg/seAYea9r)
+
 
 ## License
 
