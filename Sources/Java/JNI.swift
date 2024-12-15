@@ -319,7 +319,7 @@ public struct JNI {
     env { $0.SetArrayRegion($1, arr, JavaInt(start), JavaInt(length), buf) }
   }
 
-  func ExceptionCheck() -> Bool { env { $0.ExceptionCheck($1) } == true }
+  func ExceptionCheck() -> Bool { env { $0.ExceptionCheck($1) } == JNI_TRUE }
   func ExceptionClear() { env { $0.ExceptionClear($1) } }
   func ExceptionDescribe() { env { $0.ExceptionDescribe($1) } }
 
@@ -352,12 +352,6 @@ extension JNI {
     if ExceptionCheck() {
       ExceptionClear()
     }
-  }
-}
-
-extension JavaBoolean : ExpressibleByBooleanLiteral {
-  public init(booleanLiteral value: Bool) {
-    self = value ? JavaBoolean(JNI_TRUE) : JavaBoolean(JNI_FALSE)
   }
 }
 

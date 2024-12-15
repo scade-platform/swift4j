@@ -73,10 +73,8 @@ fileprivate func mapJavaObject<T: ObjectProtocol>(_ obj: JavaObject) -> T {
   let fqn = String(cls.fqn.map{($0 == ".") ? "/" : $0})
 
   if let clazz = __classnameToSwiftClass[fqn] {
-    print("Mapping for \(fqn) found")
     return (clazz as! T.Type).init(obj)
   } else {
-    print("Mapping for \(fqn) not found")
     return T.init(obj)
   }
 }
@@ -89,7 +87,6 @@ fileprivate func getJavaClass<T: ObjectProtocol>(from type: T.Type) -> JClass {
       $0 == "." ? "/" : $0
     })
 
-    print("Looking for Java class \(fqn)")
     var cls = findJavaClass(fqn: fqn)
 
     if cls == nil {
