@@ -3,11 +3,11 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftDiagnostics
 
-public enum JavaMacrosError: Swift.Error {
+public enum JvmMacrosError: Swift.Error {
   case message(String, Optional<SyntaxProtocol> = nil)
 }
 
-struct JavaMacrosWarnDiagnostic: DiagnosticMessage {
+struct JvmMacrosWarnDiagnostic: DiagnosticMessage {
   let message: String
 
   var severity: DiagnosticSeverity = .warning
@@ -21,7 +21,7 @@ public extension SyntaxProtocol {
   @discardableResult
   func assert<S: SyntaxProtocol>(as syntaxType: S.Type, _ msg: String) throws -> S {
     guard let decl = self.as(syntaxType) else {
-      throw JavaMacrosError.message(msg)
+      throw JvmMacrosError.message(msg)
     }
     return decl
   }
@@ -32,13 +32,13 @@ extension MacroExpansionContext {
     do {
       return try f()
     } catch {
-      if let err = error as? JavaMacrosError {
+      if let err = error as? JvmMacrosError {
         switch err {
         case .message(let msg, .some(let errNode)):
 
           self.diagnose(Diagnostic(node: Syntax(errNode),
-                                   message: JavaMacrosWarnDiagnostic(message: msg),
-                                   fixIts: disableJavaMappingFixIt(at: node)))
+                                   message: JvmMacrosWarnDiagnostic(message: msg),
+                                   fixIts: disableJvmMappingFixIt(at: node)))
           return nil
         default:
           break
@@ -49,7 +49,7 @@ extension MacroExpansionContext {
     }
   }
 
-  func disableJavaMappingFixIt(at node: some SyntaxProtocol) -> [FixIt] {
+  func disableJvmMappingFixIt(at node: some SyntaxProtocol) -> [FixIt] {
     var newNode: Syntax? = nil
     
     var nonjvmAttr: AttributeListSyntax.Element = .attribute("@nonjvm")
@@ -70,7 +70,7 @@ extension MacroExpansionContext {
       return []
     }
     
-    return [FixIt(message: DisableJavaMappingFixItMessage(),
+    return [FixIt(message: DisableJvmMappingFixItMessage(),
                   changes: [
                     FixIt.Change.replace(oldNode: Syntax(node),
                                          newNode: Syntax(newNode))
@@ -78,7 +78,7 @@ extension MacroExpansionContext {
   }
 }
 
-struct DisableJavaMappingFixItMessage: FixItMessage {
+struct DisableJvmMappingFixItMessage: FixItMessage {
   var message = "Add @nonjvm attribute to disable mapping for the given class member"
 
   var fixItID: MessageID {
