@@ -8,7 +8,6 @@ import SwiftSyntaxExtensions
 class ProxyGenerator: SyntaxVisitor {
   struct Context {
     var imports: Set<String> = []
-    var nestedClasses: Set<String> = []
   }
   
   struct GeneratorSettings {
@@ -73,42 +72,58 @@ package \(self.package);
   }
 }
 
-class ClassGenerator: SyntaxVisitor {
+class TypeGenerator<T: TypeDeclSyntax>: SyntaxVisitor {
   typealias Context = ProxyGenerator.Context
 
-  private let classDecl: ClassDeclSyntax
-  private let settings: ProxyGenerator.GeneratorSettings
+  let typeDecl: T
+  let settings: ProxyGenerator.GeneratorSettings
 
-  private var ctorGens: [CtorGenerator] = []
-  private var hasCtors: Bool = false
-  private var methodGens: [MethodGenerator] = []
+  var nestedTypeGens: [ClassGenerator] = []
 
-  var name: String { classDecl.name.text }
+  var name: String { typeDecl.typeName }
 
-  init(_ classDecl: ClassDeclSyntax, settings: ProxyGenerator.GeneratorSettings) {
-    self.classDecl = classDecl
+  var nested: Bool { typeDecl.parentDecl != nil }
+
+  init(_ typeDecl: T, settings: ProxyGenerator.GeneratorSettings) {
+    self.typeDecl = typeDecl
     self.settings = settings
 
     super.init(viewMode: .fixedUp)
 
-    walk(classDecl)
+    walk(typeDecl)
   }
-  
+
+  override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
+    if node.hashValue != typeDecl.hashValue && node.isExported {
+      nestedTypeGens.append(ClassGenerator(node, settings: settings))
+      return .skipChildren
+    }
+    return .visitChildren
+  }
+
+}
+
+
+class ClassGenerator: TypeGenerator<ClassDeclSyntax> {
+  private var ctorGens: [CtorGenerator] = []
+  private var hasCtors: Bool = false
+  private var methodGens: [MethodGenerator] = []
+
+
   override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-    if node.isExported  {
+    if node.isExported && node.parentDecl?.isExported ?? true {
       methodGens.append(MethodGenerator(node, className: name))
     }
     return .skipChildren
   }
   
   override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
-    if node.isExported  {
+    if node.isExported && node.parentDecl?.isExported ?? true {
       ctorGens.append(CtorGenerator(node, className: name))
     }
     hasCtors = true
     return .skipChildren
   }
-
 
   func generate(with ctx: inout Context) -> String {
     let ctors: String
@@ -162,23 +177,45 @@ class ClassGenerator: SyntaxVisitor {
 """
     }
 
+    var class_init =
+"""
+  static {
+    \((typeDecl.parents.first ?? typeDecl).typeName).class_init();
+  }
+"""
+
+    if !nested {
+      class_init +=
+"""
+
+  private static void class_init() {
+    if(!class_initialized) {
+      \(name)_class_init(\(name).class);
+      class_initialized = true;
+    }
+  }
+  private static boolean class_initialized = false;
+  private static native void \(name)_class_init(Class<?> cls);
+"""
+    }
+
     return
 """
-public class \(name) {
-  static {
-    \(name)_class_init(\(name).class);
-  }
+public \(nested ? "static" : "") class \(name) {
+
+\(class_init)
 
   private final long _ptr;
 
 \(std_ctor_dtor)
 
   private static native void deinit(long ptr);
-  private static native void \(name)_class_init(Class<?> cls);
 
 \(ctors)
 
 \(methodGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
+
+  \(nestedTypeGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
 }
 """
   }

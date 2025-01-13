@@ -201,7 +201,9 @@ After the generation, the briging files can be built and used as normal Java sou
 
 Currently the following types can be exposed:
 
-- Any non-generic class marked by `@jvm`  macro
+- Any non-generic class marked by `@jvm` macro
+
+- Any non-generic nested class marked by `@jvm` macro contained inside an exposed class 
 
 - Any primitive type
 

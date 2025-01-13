@@ -3,8 +3,14 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftDiagnostics
 
-public enum JvmMacrosError: Swift.Error {
+public enum JvmMacrosError: Swift.Error, CustomStringConvertible {
   case message(String, Optional<SyntaxProtocol> = nil)
+
+  public var description: String {
+    switch self {
+    case .message(let msg, _): return msg
+    }
+  }
 }
 
 struct JvmMacrosWarnDiagnostic: DiagnosticMessage {
@@ -17,20 +23,11 @@ struct JvmMacrosWarnDiagnostic: DiagnosticMessage {
   }
 }
 
-public extension SyntaxProtocol {
-  @discardableResult
-  func assert<S: SyntaxProtocol>(as syntaxType: S.Type, _ msg: String) throws -> S {
-    guard let decl = self.as(syntaxType) else {
-      throw JvmMacrosError.message(msg)
-    }
-    return decl
-  }
-}
-
 extension MacroExpansionContext {
   func executeAndWarnIfFails<T>(at node: some SyntaxProtocol, _ f: () throws -> T) -> T? {
     do {
       return try f()
+
     } catch {
       if let err = error as? JvmMacrosError {
         switch err {
