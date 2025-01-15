@@ -11,7 +11,12 @@ public extension TypeDeclSyntax {
                              funcDecls: [FunctionDeclSyntax],
                              typeDecls: [any TypeDeclSyntax])
 
-  var isExported: Bool { hasAttribute(name: "jvm") }
+  var isExported: Bool { !exportAttributes.isEmpty }
+
+  var exportAttributes: AttributeListSyntax {
+    let attrs = findAttributes(name: "jvm")
+    return AttributeListSyntax(attrs)
+  }
 
   var parents: [any TypeDeclSyntax] {
     var parents: [any TypeDeclSyntax] = []

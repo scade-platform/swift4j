@@ -60,7 +60,7 @@ JNINativeMethod(name: "deinit", sig: "(J)V", fn: \(fqn).deinit_jni)
       cls_expr = "jni.FindClass(\"\(jfqn)\")"
     }
 
-    return
+    let registerNatives =
 """
   guard let \(typeName)_cls = \(cls_expr) else { return }
   let \(typeName)_natives = [
@@ -68,7 +68,38 @@ JNINativeMethod(name: "deinit", sig: "(J)V", fn: \(fqn).deinit_jni)
   ]
   let _ = jni.RegisterNatives(\(typeName)_cls, \(typeName)_natives)
 
-  \(exportedDecls.typeDecls.map{$0.expandRegisterNatives(in: context, parents: parents + [self])}.joined(separator: "\n"))
+  \(exportedDecls.typeDecls.map {
+      $0.expandRegisterNatives(in: context, parents: parents + [self])
+    }.joined(separator: "\n")
+  )
 """
+    return exportAttributes.replaceAll(by: registerNatives)
+  }
+}
+
+fileprivate extension AttributeListSyntax {
+  func replaceAll(by syntax: String) -> String {
+    return self.map { $0.replace(by: syntax) }.joined(separator: "\n")
+  }
+}
+
+fileprivate extension AttributeListSyntax.Element {
+  func replace(by syntax: String) -> String {
+    switch self {
+    case .attribute(_):
+      return syntax
+    case .ifConfigDecl(let decl):
+      let clauses = decl.clauses.map {
+"""
+\($0.poundKeyword.text) \($0.condition?.trimmedDescription ?? "")
+\($0.elements?.as(AttributeListSyntax.self)?.replaceAll(by: syntax) ?? "" )
+"""
+      }
+      return
+"""
+\(clauses.joined(separator: "\n"))
+#endif 
+"""
+    }
   }
 }
