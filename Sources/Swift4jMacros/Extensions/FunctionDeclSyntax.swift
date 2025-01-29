@@ -12,7 +12,7 @@ extension FunctionDeclSyntax {
     return "(\(params.joined()))\(try signature.returnClause?.type.jniSignature() ?? "V")"
   }
 
-  func makeBridgingDecls(classDecl: ClassDeclSyntax) throws -> String {
+  func makeBridgingDecls(typeDecl: any TypeDeclSyntax) throws -> String {
     let paramTypes = try
       ["UnsafeMutablePointer<JNIEnv>"]
         + (isStatic ? ["JavaClass?"] : ["JavaObject?", "JavaLong"])
@@ -25,8 +25,8 @@ extension FunctionDeclSyntax {
         +  signature.parameterClause.parameters.map{ $0.name }
 
     let _self = isStatic
-      ? "\(classDecl.name.text).self"
-      : "unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Unmanaged<\(classDecl.name.text)>.self).takeUnretainedValue()"
+      ? "\(typeDecl.typeName).self"
+      : "unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Unmanaged<\(typeDecl.typeName)>.self).takeUnretainedValue()"
 
     let (call, stmts) = try makeBridgingFunctionBody()
 

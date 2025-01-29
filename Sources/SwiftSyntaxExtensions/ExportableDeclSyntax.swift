@@ -2,11 +2,14 @@ import SwiftSyntax
 
 
 public protocol ExportableDeclSyntax: DeclSyntaxProtocol {
+  var name: TokenSyntax { get }
   var attributes: AttributeListSyntax { get }
 }
 
 
 extension ExportableDeclSyntax {
+  public var exportName: String { name.text }
+
   public var isExported: Bool { findAttributes(name: "nonjvm").isEmpty }
 
   public var parentDecl: (any TypeDeclSyntax)? {

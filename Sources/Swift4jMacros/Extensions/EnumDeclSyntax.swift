@@ -1,0 +1,55 @@
+import SwiftSyntax
+
+import SwiftSyntax
+import SwiftSyntaxBuilder
+import SwiftSyntaxMacros
+import SwiftDiagnostics
+
+import SwiftSyntaxExtensions
+
+
+extension EnumDeclSyntax: JvmTypeDeclSyntax {
+  func expandMembers(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+    let toJavaCases = cases().map{
+"""
+case .\($0): return Self.javaClass.getStatic(field: "\($0)", sig: "L\(fqn(from: context));")?.ptr
+"""
+    }.joined(separator: "\n")
+
+    let fromJavaCases = cases().enumerated().map{
+"""
+case \($0.offset): return .\($0.element)
+"""
+    }.joined(separator: "\n")
+
+
+    let syntax =
+"""
+\(expandJavaClassDecl(in: context))
+
+public static func fromJavaObject(_ obj: JavaObject?) -> \(typeName) {
+  let ordinal: Int32 = JObject(obj!).get(field: "ordinal")
+  switch ordinal {
+  \(fromJavaCases)
+  default:
+  fatalError("Cannot create an enum case")
+  }
+}
+
+public func toJavaObject() -> JavaObject? {
+  switch self {
+  \(toJavaCases)
+  }
+}
+
+"""
+    
+// \(expandFuncDecls(in: context))
+    return ["\(raw: syntax)"]
+  }
+
+  func expandPeer(in context: some MacroExpansionContext) -> [DeclSyntax] {
+    return []
+  }
+}
+

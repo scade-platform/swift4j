@@ -8,20 +8,25 @@
 import CJNI
 
 
-public final class JClass : JObject {
-  private static var _javaClasses: [String: JavaClass] = [:]
-
-  private var _fqn: String?
+public final class JClass: JObject, Sendable {
+  private let _fqn: String?
 
   public var fqn: String {
     if let fqn = _fqn {
       return fqn
     }
-    
-    let fqn: String = call(method: Class__getName)
-    self._fqn = fqn
 
-    return fqn
+    return call(method: Class__getName)
+  }
+
+  private init(_ ptr: JavaObject, fqn: String) {
+    self._fqn = fqn
+    super.init(ptr)
+  }
+
+  public override init(_ ptr: JavaObject, weak: Bool = false) {
+    self._fqn = nil
+    super.init(ptr, weak: weak)
   }
 
   public convenience init?(fqn: String) {
@@ -30,8 +35,7 @@ public final class JClass : JObject {
       return nil
     }
 
-    self.init(jcls)
-    self._fqn = fqn
+    self.init(jcls, fqn: fqn)
   }
 
   public func getFieldID(name: String, sig: String) -> JavaFieldID? {
@@ -98,8 +102,8 @@ public final class JClass : JObject {
   public func create<T>(_ args: JConvertible..., signature: String? = nil) -> T where T: ObjectProtocol {
     return T(create(args, signature: signature))
   }
-  
-  
+
+
   public func getStatic<T: JConvertible>(field: JavaFieldID) -> T {
     return T.fromStaticField(field, of: ptr)
   }
@@ -110,10 +114,23 @@ public final class JClass : JObject {
     }
     return self.getStatic(field: fieldId)
   }
-  
-  
-  
-  
+
+  public func getStatic(field: JavaFieldID) -> JObject? {
+    guard let obj = jni.GetStaticObjectField(ptr, field) else {
+      return nil
+    }
+    return JObject(obj)
+  }
+
+  public func getStatic(field: String, sig: String) -> JObject? {
+    guard let fieldId = getStaticFieldID(name: field, sig: sig) else {
+      fatalError("Cannot find static field \(field) with signature \(sig)")
+    }
+    return self.getStatic(field: fieldId)
+  }
+
+
+
   public func setStatic<T: JConvertible>(field: JavaFieldID, value: T) {
     value.toStaticField(field, of: self.ptr)
   }
@@ -122,11 +139,21 @@ public final class JClass : JObject {
     guard let fieldId = getStaticFieldID(name: field, sig: T.javaSignature) else {
       fatalError("Cannot find static field \(field) with signature \(T.javaSignature)")
     }
-    value.toStaticField(fieldId, of: self.ptr)
+    setStatic(field: fieldId, value: value)
   }
   
-  
-  
+  public func setStatic(field: JavaFieldID, value: JObject?) {
+    jni.SetStaticObjectField(self.ptr, field, value?.ptr)
+  }
+
+  public func setStatic(field: String, sig: String, value: JObject?) {
+    guard let fieldId = getStaticFieldID(name: field, sig: sig) else {
+      fatalError("Cannot find static field \(field) with signature \(sig)")
+    }
+    setStatic(field: fieldId, value: value)
+  }
+
+
   
   public func callStatic(method: JavaMethodID, _ args : [JavaParameter]) -> Void {
     jni.CallStaticVoidMethod(self.ptr, method, args)
@@ -209,7 +236,4 @@ public func findJavaClass(fqn: String) -> JClass? {
 
 fileprivate let Class__class = JClass(fqn: "java/lang/Class")!
 fileprivate let Class__getName = Class__class.getMethodID(name: "getName", sig: "()Ljava/lang/String;")!
-
-
-fileprivate var __javaClasses = Dictionary<String, JClass>()
 

@@ -16,7 +16,11 @@ extension TypeSyntax {
 
     } else if let typeSyntax = self.as(ArrayTypeSyntax.self) {
       return typeSyntax
+
+    } else if let attributedTypeSyntax = self.as(AttributedTypeSyntax.self) {
+      return try attributedTypeSyntax.baseType.map()
     }
+
 
     throw JvmMacrosError.message("Unsupported type", self)
   }
@@ -51,6 +55,10 @@ protocol JvmMappedTypeSyntax: SyntaxProtocol {
 extension JvmMappedTypeSyntax {
   var typedEntityName: String? {
     if let funcParam = parent?.as(FunctionParameterSyntax.self) {
+      return funcParam.name
+
+    } else if let attrFuncParam = parent?.as(AttributedTypeSyntax.self),
+                let funcParam = attrFuncParam.parent?.as(FunctionParameterSyntax.self) {
       return funcParam.name
     }
     return nil

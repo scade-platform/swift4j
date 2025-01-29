@@ -54,7 +54,12 @@ class SwiftArray {
   }
 }
 
-extension SwiftArray: JObjectRepresentable {
+extension SwiftArray: JObjectConvertible {
+  public static func fromJavaObject(_ obj: JavaObject?) -> Self {
+    let ptr: Int = JObject(obj!).get(field: "_ptr")
+    return unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Self.self)
+  }
+  
   public func toJavaObject() -> JavaObject? {
     if jobj == nil {
       jobj = JObject(Self.javaClass.create(unsafeBitCast(Unmanaged.passRetained(self), to: JavaLong.self)), weak: true)

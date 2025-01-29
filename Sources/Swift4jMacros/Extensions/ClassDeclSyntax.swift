@@ -7,30 +7,22 @@ import SwiftSyntaxExtensions
 
 
 extension ClassDeclSyntax: JvmTypeDeclSyntax {
+
   func expandMembers(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
 
-    var fqn = typeName
-
-    if let moduleName = moduleName(from: context) {
-      fqn = "\(moduleName)/\(fqn)"
-    }
-
-    let varDecls =
+    let jobjDecls =
 """
-private var jobj: JObject? = nil
+private let jref: JObjectRef<\(typeName)> = .init()
 
-public static var javaClass = {
-  guard let cls = JClass(fqn: \"\(fqn)\") else {
-    fatalError("Could not find \(fqn) class")
-  }
-  return cls
-} ()
+\(expandJavaClassDecl(in: context))
+
+public static func fromJavaObject(_ obj: JavaObject?) -> Self {
+  let ptr: Int = JObject(obj!).get(field: "_ptr")
+  return unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Self.self)
+}
 
 public func toJavaObject() -> JavaObject? {
-  if jobj == nil {
-    jobj = JObject(Self.javaClass.create(unsafeBitCast(Unmanaged.passRetained(self), to: JavaLong.self)), weak: true)
-  }
-  return jobj?.ptr
+  return jref.from(self)
 }
 """
 
@@ -39,7 +31,8 @@ public func toJavaObject() -> JavaObject? {
 fileprivate typealias deinit_jni_t = @convention(c)(UnsafeMutablePointer<JNIEnv>, JavaClass?, JavaLong) -> Void
 fileprivate static let deinit_jni: deinit_jni_t = { _, _, ptr in
   let _self = unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Unmanaged<\(typeName)>.self)
-  _self.release()
+  _self.takeUnretainedValue().jref.release()
+  _self.release()  
 }
 """
 
@@ -66,20 +59,12 @@ fileprivate static let init_jni: init_jni_t = { _, _ in
 """
     }
 
-    let funcDecls = exportedDecls.funcDecls
-      .compactMap { decl in
-        return context.executeAndWarnIfFails(at: decl) {
-          return try decl.makeBridgingDecls(classDecl: self)
-        }
-      }
-      .joined(separator: "\n")
-
     let syntax =
 """
-\(varDecls)
+\(jobjDecls)
 \(initDecls)
 \(deinitDecls)
-\(funcDecls)
+\(expandFuncDecls(in: context))
 """
 
     return ["\(raw: syntax)"]
@@ -100,7 +85,6 @@ func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClas
 """
     return ["\(raw: decl)"]
   }
-
 }
 
 

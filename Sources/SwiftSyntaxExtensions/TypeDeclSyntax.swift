@@ -1,15 +1,15 @@
 import SwiftSyntax
 
 
-public protocol TypeDeclSyntax: ExportableDeclSyntax, DeclGroupSyntax, SyntaxHashable {
-  var typeName: String { get }
-}
+public protocol TypeDeclSyntax: ExportableDeclSyntax, DeclGroupSyntax, SyntaxHashable { }
 
 public extension TypeDeclSyntax {
   typealias ExportedDecls = (hasInitDecls: Bool,
                              initDecls: [InitializerDeclSyntax],
                              funcDecls: [FunctionDeclSyntax],
                              typeDecls: [any TypeDeclSyntax])
+
+  var typeName: String { exportName }
 
   var isExported: Bool { !exportAttributes.isEmpty }
 
@@ -53,3 +53,9 @@ public extension TypeDeclSyntax {
     return decls
   }
 }
+
+
+
+extension ClassDeclSyntax: TypeDeclSyntax { }
+
+extension EnumDeclSyntax: TypeDeclSyntax { }

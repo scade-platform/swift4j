@@ -7,14 +7,20 @@
 
 import CJNI
 
+#if os(Linux) || os(Android)
+  import Glibc
+#else
+  import Darwin
+#endif
 
-public class JObject {
+
+
+public class JObject: @unchecked Sendable {
   public let ptr: JavaObject
   public let weak: Bool
 
   public lazy var cls: JClass = {
-    let obj = jni.CallObjectMethod(ptr, Object__getClass, [])!
-    return JClass(obj)
+    JClass(jni.CallObjectMethod(ptr, Object__getClass, [])!)
   }()
   
   public init(_ ptr: JavaObject, weak: Bool = false) {
@@ -23,7 +29,7 @@ public class JObject {
   }
     
   deinit {
-    if self.weak {
+    if !self.weak {
       jni.DeleteGlobalRef(self.ptr)
     }
   }
@@ -86,9 +92,6 @@ public class JObject {
     let sig = "(\(args.reduce("", { $0 + type(of: $1).javaSignature})))V"
     return call(method: method, sig: sig, args.map{$0.toJavaParameter()}) as Void
   }
-  
-  
-
 
   public func call<T>(method: JavaMethodID, _ args: [JavaParameter]) -> T where T: JConvertible {
     return T.fromMethod(method, on: ptr, args: args)
@@ -119,20 +122,59 @@ public class JObject {
 }
 
 
+public final class JObjectRef<T: JObjectConvertible & AnyObject>: @unchecked Sendable {
+  private var jobj: JObject?
+  // private var mutex = pthread_mutex_t()
+
+  public init(jobj: JObject? = nil) {
+    self.jobj = jobj
+    //pthread_mutex_init(&self.mutex, nil)
+  }
+
+  deinit {
+    //pthread_mutex_destroy(&self.mutex)
+  }
+
+  public func from(_ obj: T) -> JavaObject {
+    if let jobj = jobj {
+      return jobj.ptr
+    }
+
+    jobj = JObject(T.javaClass.create(unsafeBitCast(Unmanaged.passRetained(obj), to: JavaLong.self)), weak: true)
+    return jobj!.ptr
+
+    /*
+    return withLock { jobj in
+      if let jobj = jobj {
+        return jobj.ptr
+      }
+
+      jobj = JObject(T.javaClass.create(unsafeBitCast(Unmanaged.passRetained(obj), to: JavaLong.self)), weak: true)
+      return jobj!.ptr
+    }
+    */
+  }
+
+  public func release() {
+    self.jobj = nil
+    
+    /*
+    withLock {
+      $0 = nil
+    }
+    */
+  }
+
+  /*
+  private func withLock<R>(_ body: @Sendable (inout JObject?) -> R) -> R {
+    pthread_mutex_lock(&self.mutex); defer { pthread_mutex_unlock(&self.mutex) }
+    return body(&jobj)
+  }
+  */
+}
+
+
 
 fileprivate let Object__class = JClass(jni.FindClass("java/lang/Object")!)
 fileprivate let Object__getClass = Object__class.getMethodID(name: "getClass", sig: "()Ljava/lang/Class;")!
-
-//fileprivate let Object__hashcode = jni.GetMethodID(env, Object__class, "hashCode", "()I")!
-
-
-//fileprivate func hashCode(_ obj: JavaObject) -> Int32 {
-//  return Int32.fromMethod(Object__hashcode, on: obj, args: [])
-//}
-
-
-
-
-
-
 

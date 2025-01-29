@@ -129,7 +129,7 @@ public struct JNI {
 
   public func GetStaticFieldID(_ cls: JavaClass, _ name: String, _ sig: String) -> JavaFieldID? { env { $0.GetFieldID($1, cls, name, sig) } }
 
-  public func GetStaticObjectField(_ cls: JavaClass, _ fieldID: JavaFieldID) -> JavaClass? { env { $0.GetStaticObjectField($1, cls, fieldID) } }
+  public func GetStaticObjectField(_ cls: JavaClass, _ fieldID: JavaFieldID) -> JavaObject? { env { $0.GetStaticObjectField($1, cls, fieldID) } }
   public func GetStaticBooleanField(_ cls: JavaClass, _ fieldID: JavaFieldID) -> JavaBoolean { env { $0.GetStaticBooleanField($1, cls, fieldID) } }
   public func GetStaticByteField(_ cls: JavaClass, _ fieldID: JavaFieldID) -> JavaByte { env { $0.GetStaticByteField($1, cls, fieldID) } }
   public func GetStaticCharField(_ cls: JavaClass, _ fieldID: JavaFieldID) -> JavaChar { env { $0.GetStaticCharField($1, cls, fieldID) } }
@@ -139,7 +139,7 @@ public struct JNI {
   public func GetStaticFloatField(_ cls: JavaClass, _ fieldID: JavaFieldID) -> JavaFloat { env { $0.GetStaticFloatField($1, cls, fieldID) } }
   public func GetStaticDoubleField(_ cls: JavaClass, _ fieldID: JavaFieldID) -> JavaDouble { env { $0.GetStaticDoubleField($1, cls, fieldID) } }
 
-  public func SetStaticObjectField(_ cls: JavaClass, _ fieldID: JavaFieldID, _ value: JavaClass?) { env { $0.SetStaticObjectField($1, cls, fieldID, value) } }
+  public func SetStaticObjectField(_ cls: JavaClass, _ fieldID: JavaFieldID, _ value: JavaObject?) { env { $0.SetStaticObjectField($1, cls, fieldID, value) } }
   public func SetStaticBooleanField(_ cls: JavaClass, _ fieldID: JavaFieldID, _ value: JavaBoolean) { env { $0.SetStaticBooleanField($1, cls, fieldID, value) } }
   public func SetStaticByteField(_ cls: JavaClass, _ fieldID: JavaFieldID, _ value: JavaByte) { env { $0.SetStaticByteField($1, cls, fieldID, value) } }
   public func SetStaticCharField(_ cls: JavaClass, _ fieldID: JavaFieldID, _ value: JavaChar) { env { $0.SetStaticCharField($1, cls, fieldID, value) } }
@@ -325,14 +325,16 @@ public struct JNI {
 
 
   public func RegisterNatives(_ cls: JavaClass, _ methods: [JNINativeMethod]) -> JavaInt { env { $0.RegisterNatives($1, cls, methods, JavaInt(methods.count)) } }
+
   public func UnregisterNatives(_ cls: JavaClass) -> JavaInt { env { $0.UnregisterNatives($1, cls) } }
 
   public func GetObjectRefType(_ obj: JavaObject) -> JavaObjectRefType { env { $0.GetObjectRefType($1, obj) } }  
 }
 
 
-
 // MARK: - Extensions
+
+public typealias JNINativeMethod2 = (name: String, sig: String, fn: UnsafeMutableRawPointer)
 
 extension JNI {
   struct JNIError: Error {
@@ -353,6 +355,24 @@ extension JNI {
       ExceptionClear()
     }
   }
+
+  public func RegisterNatives(_ cls: JavaClass,
+                              _ methods: [JNINativeMethod2],
+                              _ nativeMethods: [JNINativeMethod] = []) -> JavaInt {
+
+    if let m = methods.first {
+      return m.name.withCString { name_ptr in
+        m.sig.withCString { sig_ptr in
+          return RegisterNatives(cls,
+                                 [JNINativeMethod2](methods.dropFirst()),
+                                 nativeMethods + [JNINativeMethod(name: name_ptr, signature: sig_ptr, fnPtr: m.fn)])
+        }
+      }
+
+    } else {
+      return RegisterNatives(cls, nativeMethods)
+    }
+  }
 }
 
 extension JavaObject : JParameterConvertible {
@@ -362,10 +382,14 @@ extension JavaObject : JParameterConvertible {
 
 public extension JNINativeMethod {
   init<T>(name: StaticString, sig: StaticString, fn: T) {
+    let fn_ptr = unsafeBitCast(fn, to: UnsafeMutableRawPointer.self)
+    self.init(name: name, sig: sig, fnPtr: fn_ptr)
+  }
+
+  init(name: StaticString, sig: StaticString, fnPtr: UnsafeMutableRawPointer) {
     let name_ptr = UnsafeRawPointer(name.utf8Start).assumingMemoryBound(to: Int8.self)
     let sig_ptr = UnsafeRawPointer(sig.utf8Start).assumingMemoryBound(to: Int8.self)
-    let fn_ptr = unsafeBitCast(fn, to: UnsafeMutableRawPointer.self)
 
-    self.init(name: name_ptr, signature: sig_ptr, fnPtr: fn_ptr)
+    self.init(name: name_ptr, signature: sig_ptr, fnPtr: fnPtr)
   }
 }

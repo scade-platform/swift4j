@@ -5,12 +5,30 @@ import SwiftSyntaxExtensions
 
 extension TypeDeclSyntax {
 
+  func fqn(from context: some MacroExpansionContext) -> String {
+    var fqn = typeName
+    if let moduleName = moduleName(from: context) {
+      fqn = "\(moduleName)/\(fqn)"
+    }
+    return fqn
+  }
+
   func moduleName(from context: some MacroExpansionContext) -> String? {
     guard let segments = context.location(of: self)?.file.as(StringLiteralExprSyntax.self)?.segments,
           segments.count == 1, case .stringSegment(let literalSegment)? = segments.first,
           let moduleNameSep = literalSegment.content.text.firstIndex(of: "/") else { return nil }
 
     return String(literalSegment.content.text[literalSegment.content.text.startIndex ..< moduleNameSep])
+  }
+
+  func expandCreateNativeMethod(name: String, sig: String, fn: String) -> String {
+    return
+"""
+JNINativeMethod(name: "\(name)", sig: "\(sig)", fn: \(fn))
+"""
+//"""
+//JNINativeMethod2(name: "\(name)", sig: "\(sig)", fn: unsafeBitCast(\(fn), to: UnsafeMutableRawPointer.self))
+//"""
   }
 
   func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax] = []) -> String {
@@ -20,33 +38,23 @@ extension TypeDeclSyntax {
 
     let funcNatives: [String] = exportedDecls.funcDecls.compactMap {
       guard let jniSig = try? $0.jniSignature() else { return nil }
-      return
-"""
-JNINativeMethod(name: "\($0.name.text)Impl", sig: "\(jniSig)", fn: \(fqn).\($0.name.text)_jni)
-"""
+      return expandCreateNativeMethod(name: "\($0.name.text)Impl", sig: jniSig, fn: "\(fqn).\($0.name.text)_jni")
       }
 
     let initNatives: [String]
     if exportedDecls.hasInitDecls {
       initNatives = exportedDecls.initDecls.enumerated().compactMap {
         guard let jniSig = try? $1.jniSignature() else { return nil }
-        return
-"""
-JNINativeMethod(name: "init\($0)", sig: "\(jniSig)", fn: \(fqn).init\($0)_jni)
-"""
+        return expandCreateNativeMethod(name: "init\($0)", sig: jniSig, fn: "\(fqn).init\($0)_jni")
       }
     } else {
       initNatives = [
-"""
-JNINativeMethod(name: "init", sig: "()J", fn: \(fqn).init_jni)
-"""
+        expandCreateNativeMethod(name: "init", sig: "()J", fn: "\(fqn).init_jni")
       ]
     }
 
     let natives = initNatives + [
-"""
-JNINativeMethod(name: "deinit", sig: "(J)V", fn: \(fqn).deinit_jni)
-"""
+      expandCreateNativeMethod(name: "deinit", sig: "(J)V", fn: "\(fqn).deinit_jni")
     ] + funcNatives
 
     let cls_expr: String
@@ -75,6 +83,34 @@ JNINativeMethod(name: "deinit", sig: "(J)V", fn: \(fqn).deinit_jni)
 """
     return exportAttributes.replaceAll(by: registerNatives)
   }
+
+
+  func expandFuncDecls(in context: some MacroExpansionContext) -> String {
+    return exportedDecls.funcDecls
+      .compactMap { decl in
+        return context.executeAndWarnIfFails(at: decl) {
+          return try decl.makeBridgingDecls(typeDecl: self)
+        }
+      }
+      .joined(separator: "\n")
+  }
+
+
+  func expandJavaClassDecl(in context: some MacroExpansionContext) -> String {
+    let fqn = fqn(from: context)
+    return
+"""
+public static let javaName = "\(fqn)"
+
+public static let javaClass = {
+  guard let cls = JClass(fqn: javaName) else {
+    fatalError("Could not find \\(javaName) class")
+  }
+  return cls
+} ()
+"""
+  }
+  
 }
 
 fileprivate extension AttributeListSyntax {

@@ -7,7 +7,9 @@ public enum Platform: Equatable {
     case Android
 }
 
-@attached(extension, conformances: JObjectRepresentable, names: named(toJavaObject))
+@attached(extension,
+          conformances: JObjectConvertible,
+          names: named(toJavaObject), named(fromJavaObject))
 @attached(peer, names: suffixed(_class_init))
 @attached(member,
           names: 

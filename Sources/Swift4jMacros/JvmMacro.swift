@@ -14,6 +14,9 @@ public struct JvmMacro {
     if let classDecl = decl.as(ClassDeclSyntax.self) {
       return classDecl
 
+    } else if let enumDecl = decl.as(EnumDeclSyntax.self) {
+      return enumDecl
+
     } else {
       throw JvmMacrosError.message("@jvm macro can only be applied to a class declaration")
     }
@@ -99,7 +102,7 @@ extension JvmMacro: ExtensionMacro {
 
     let extSyntax =
 """
-extension \(type.trimmed): JObjectRepresentable { }
+extension \(type.trimmed): JObjectConvertible { }
 """
     return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: extSyntax))]
   }

@@ -29,7 +29,7 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
     case "Float": primitivesAsObjects ? "Ljava/lang/Float;" : "F"
     case "Double": primitivesAsObjects ? "Ljava/lang/Double;" : "D"
     case "String": "Ljava/lang/String;"
-    default: name.text
+    default: "L\\(\(name.text).javaName);" //"\\(\(name.text).javaSignature)"
     }
   }
 
