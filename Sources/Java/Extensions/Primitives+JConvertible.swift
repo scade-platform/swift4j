@@ -1,41 +1,35 @@
 //
-//  String.swift
-//  JavaUtil
+//  Primitives+JConvertible.swift
+//  Java
 //
 //  Created by Grigory Markin on 24.08.18.
 //
 
 import CJNI
 
+
+// MARK: - JPrimitiveObjectProtocol
+
 public protocol JPrimitiveObjectProtocol: ObjectProtocol {
   associatedtype ConvertibleType: JConvertible
-  
-  var value: ConvertibleType { get }
-  
-  init(_ value: ConvertibleType)
-  
-  init(_ obj: JavaObject)
-}
 
-//------------------------------------------------------------------------
-
-fileprivate protocol JPrimitiveObjectInternalProtocol: JPrimitiveObjectProtocol {
-  static var __method__init : JavaMethodID { get }
-  static var __method__value : JavaMethodID { get }
+  static var javaValue: JavaMethodID { get }
+  static var javaInitWithValue: JavaMethodID { get }
 }
 
 
-extension JPrimitiveObjectInternalProtocol {
-  public init(_ value: ConvertibleType) {
-    self.init(Self.javaClass.create(ctor: Self.__method__init, value))
+public extension JPrimitiveObjectProtocol {
+  var value: ConvertibleType {
+    return self.javaObject.call(method: Self.javaValue)
   }
   
-  public var value: ConvertibleType {
-    return self.javaObject.call(method: Self.__method__value)
+  init(_ value: ConvertibleType) {
+    self.init(Self.javaClass.create(ctor: Self.javaInitWithValue, value))
   }
 }
 
-//------------------------------------------------------------------------
+
+// MARK: - JPrimitiveConvertable
 
 public protocol JPrimitiveConvertible : JNullInitializable {
   associatedtype PrimitiveType: JPrimitiveObjectProtocol
@@ -43,29 +37,29 @@ public protocol JPrimitiveConvertible : JNullInitializable {
 
 extension JPrimitiveConvertible where PrimitiveType.ConvertibleType == Self {
   public func toJavaObject() -> JavaObject? {
-    return PrimitiveType(self).javaObject.ptr
+    return PrimitiveType.javaClass.create(ctor: PrimitiveType.javaInitWithValue, self)
   }
   
   public static func fromJavaObject(_ obj: JavaObject) -> Self {
-    return PrimitiveType(obj).value
+    return JObject(obj).call(method: PrimitiveType.javaValue)
   }
 }
 
 
 
 
-// ----------- Boolean -----------
+// MARK: - Bool
 
-final public class JBoolean: Object, JPrimitiveObjectInternalProtocol {
+final public class JBoolean: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = Bool
-  
-  public final override class var javaClass: JClass { return __class }
-  
+
   fileprivate static let __class = findJavaClass(fqn: "java/lang/Boolean")!
+
+  public final override class var javaClass: JClass { return __class }
+
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(Z)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(Z)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "booleanValue", sig: "()Z")!
+  public static let javaValue = __class.getMethodID(name: "booleanValue", sig: "()Z")!
 }
 
 extension Bool: JPrimitiveConvertible {
@@ -103,18 +97,18 @@ extension Bool: JPrimitiveConvertible {
 }
 
 
-// ----------- Byte -----------
+// MARK: - Byte
 
-final public class JByte: Object, JPrimitiveObjectInternalProtocol {
+final public class JByte: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = Int8
-  
-  public final override class var javaClass: JClass { return __class }
-  
+
   fileprivate static let __class = findJavaClass(fqn: "java/lang/Byte")!
+
+  public final override class var javaClass: JClass { return __class }
+
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(B)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(B)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "byteValue", sig: "()B")!
+  public static let javaValue = __class.getMethodID(name: "byteValue", sig: "()B")!
 }
 
 
@@ -152,18 +146,18 @@ extension Int8: JPrimitiveConvertible {
   }
 }
 
-// ----------- Char -----------
+// MARK: - Char
 
-final public class JChar: Object, JPrimitiveObjectInternalProtocol {
+final public class JChar: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = UInt16
-  
-  public final override class var javaClass: JClass { return __class }
-  
+
   fileprivate static let __class = findJavaClass(fqn: "java/lang/Character")!
+
+  public final override class var javaClass: JClass { return __class }
+
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(C)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(C)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "charValue", sig: "()C")!
+  public static let javaValue = __class.getMethodID(name: "charValue", sig: "()C")!
 }
 
 
@@ -201,18 +195,18 @@ extension UInt16: JPrimitiveConvertible {
   }
 }
 
-// ----------- Short -----------
+// MARK: - Short
 
-final public class JShort: Object, JPrimitiveObjectInternalProtocol {
+final public class JShort: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = Int16
-  
-  public final override class var javaClass: JClass { return __class }
-  
+
   fileprivate static let __class = findJavaClass(fqn: "java/lang/Short")!
+
+  public final override class var javaClass: JClass { return __class }
+
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(S)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(S)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "shortValue", sig: "()S")!
+  public static let javaValue = __class.getMethodID(name: "shortValue", sig: "()S")!
 }
 
 
@@ -251,18 +245,18 @@ extension Int16: JPrimitiveConvertible {
 }
 
 
-// ----------- Integer -----------
+// MARK: - Integer
 
-final public class JInteger: Object, JPrimitiveObjectInternalProtocol {
+final public class JInteger: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = Int32
-  
+
+  fileprivate static let __class = findJavaClass(fqn: "java/lang/Integer")!
+
   public final override class var javaClass: JClass { return __class }
   
-  fileprivate static let __class = findJavaClass(fqn: "java/lang/Integer")!
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(I)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(I)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "intValue", sig: "()I")!
+  public static let javaValue = __class.getMethodID(name: "intValue", sig: "()I")!
 }
 
 
@@ -301,18 +295,18 @@ extension Int32: JPrimitiveConvertible {
 }
 
 
-// ----------- Long -----------
+// MARK: - Long
 
-final public class JLong: Object, JPrimitiveObjectInternalProtocol {
+final public class JLong: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = Int64
-  
-  public final override class var javaClass: JClass { return __class }
-  
+
   fileprivate static let __class = findJavaClass(fqn: "java/lang/Long")!
+
+  public final override class var javaClass: JClass { return __class }
+
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(J)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(J)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "longValue", sig: "()J")!
+  public static let javaValue = __class.getMethodID(name: "longValue", sig: "()J")!
 }
 
 
@@ -351,7 +345,7 @@ extension Int64: JPrimitiveConvertible {
 }
 
 
-// ----------- Int -----------
+// MARK: - Int
 
 extension Int: JPrimitiveConvertible {
   #if arch(x86_64) || arch(arm64)
@@ -402,18 +396,18 @@ extension Int: JPrimitiveConvertible {
 }
 
 
-// ----------- Float -----------
+// MARK: - Float
 
-final public class JFloat: Object, JPrimitiveObjectInternalProtocol {
+final public class JFloat: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = Float
-  
+
+  fileprivate static let __class = findJavaClass(fqn: "java/lang/Float")!
+
   public final override class var javaClass: JClass { return __class }
   
-  fileprivate static let __class = findJavaClass(fqn: "java/lang/Float")!
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(F)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(F)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "floatValue", sig: "()F")!
+  public static let javaValue = __class.getMethodID(name: "floatValue", sig: "()F")!
 }
 
 extension Float: JPrimitiveConvertible {
@@ -451,18 +445,18 @@ extension Float: JPrimitiveConvertible {
 }
 
 
-// ----------- Double -----------
+// MARK: - Double
 
-final public class JDouble: Object, JPrimitiveObjectInternalProtocol {
+final public class JDouble: Object, JPrimitiveObjectProtocol {
   public typealias ConvertibleType = Double
-  
+
+  fileprivate static let __class = findJavaClass(fqn: "java/lang/Double")!
+
   public final override class var javaClass: JClass { return __class }
   
-  fileprivate static let __class = findJavaClass(fqn: "java/lang/Double")!
+  public static let javaInitWithValue = __class.getMethodID(name: "<init>", sig: "(D)V")!
   
-  fileprivate static let __method__init = __class.getMethodID(name: "<init>", sig: "(D)V")!
-  
-  fileprivate static let __method__value = __class.getMethodID(name: "doubleValue", sig: "()D")!
+  public static let javaValue = __class.getMethodID(name: "doubleValue", sig: "()D")!
 }
 
 extension Double: JPrimitiveConvertible {
@@ -501,7 +495,7 @@ extension Double: JPrimitiveConvertible {
 
 
 
-// ----------- String -----------
+// MARK: - String
 
 extension String: JObjectConvertible, JNullInitializable {
   fileprivate static let __class = findJavaClass(fqn: "java/lang/String")!

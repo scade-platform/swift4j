@@ -8,7 +8,7 @@
 import CJNI
 
 
-public final class JClass: JObject, Sendable {
+public final class JClass: JObject, @unchecked Sendable {
   private let _fqn: String?
 
   public var fqn: String {

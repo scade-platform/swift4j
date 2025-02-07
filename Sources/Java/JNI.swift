@@ -45,7 +45,7 @@ public struct JNI {
 
     switch status {
     case JNI_EDETACHED:
-      _ = jvm.AttachCurrentThread(jvm_ptr, &env, nil)
+      _ = jvm.AttachCurrentThreadAsDaemon(jvm_ptr, &env, nil)
     case JNI_EVERSION:
       fatalError("This version of JNI is not supported")
     default: break

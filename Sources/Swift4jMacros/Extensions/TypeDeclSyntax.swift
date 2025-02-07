@@ -24,11 +24,8 @@ extension TypeDeclSyntax {
   func expandCreateNativeMethod(name: String, sig: String, fn: String) -> String {
     return
 """
-JNINativeMethod(name: "\(name)", sig: "\(sig)", fn: \(fn))
+JNINativeMethod2(name: "\(name)", sig: "\(sig)", fn: unsafeBitCast(\(fn), to: UnsafeMutableRawPointer.self))
 """
-//"""
-//JNINativeMethod2(name: "\(name)", sig: "\(sig)", fn: unsafeBitCast(\(fn), to: UnsafeMutableRawPointer.self))
-//"""
   }
 
   func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax] = []) -> String {
