@@ -211,7 +211,7 @@ Currently the following types can be exposed:
 
 - Any lambda only containing exposed types in its signature
   
-   
+- Enums without associated types   
 
 The following class members are supported if and only if its signatures only contain exposed types:
 
