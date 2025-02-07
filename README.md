@@ -203,7 +203,7 @@ Currently the following types can be exposed:
 
 - Any non-generic class marked by `@jvm` macro
 
-- Any non-generic nested class marked by `@jvm` macro contained inside an exposed class 
+- Any non-generic nested class marked by `@jvm` macro contained inside an exposed class (>= Swift 6.0)
 
 - Any primitive type
 
