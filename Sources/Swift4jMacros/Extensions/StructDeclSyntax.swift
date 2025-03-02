@@ -6,27 +6,27 @@ import SwiftDiagnostics
 import SwiftSyntaxExtensions
 
 
-extension ClassDeclSyntax: JvmTypeDeclSyntax {
-  
+extension StructDeclSyntax: JvmTypeDeclSyntax {
   func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String {
+    return
 """
-private let jref: JObjectRef<\(typeName)> = .init()
-
 private static func _cast(_ ptr: JavaLong) -> Self {
-  return unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Unmanaged<Self>.self).takeUnretainedValue()
+  return UnsafeMutablePointer<\(typeName)>(bitPattern: Int(truncatingIfNeeded: ptr))!.pointee
 }
 
 private func _cast() -> JavaLong {
-  return unsafeBitCast(Unmanaged.passRetained(self), to: JavaLong.self)
+  let ptr = UnsafeMutablePointer<\(typeName)>.allocate(capacity: 1)
+  ptr.initialize(to: self)
+  return JavaLong(Int(bitPattern: ptr))
 }
 
 public static func fromJavaObject(_ obj: JavaObject?) -> Self {
-  let ptr: Int = JObject(obj!).get(field: "_ptr")
-  return unsafeBitCast(ptr, to: Unmanaged<Self>.self).takeUnretainedValue()
+  let ptr: JavaLong = JObject(obj!).get(field: "_ptr")
+  return _cast(ptr)
 }
 
 public func toJavaObject() -> JavaObject? {
-  return jref.from(self)
+  return \(typeName).javaClass.create(self._cast())  
 }
 """
   }
@@ -39,14 +39,12 @@ public func toJavaObject() -> JavaObject? {
         }
       }
       .joined(separator: "\n")
-    
+
     let deinitDecls =
 """
 fileprivate typealias deinit_jni_t = @convention(c)(UnsafeMutablePointer<JNIEnv>, JavaClass?, JavaLong) -> Void
 fileprivate static let deinit_jni: deinit_jni_t = { _, _, ptr in
-  let _self = unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Unmanaged<\(typeName)>.self)
-  _self.takeUnretainedValue().jref.release()
-  _self.release()  
+  UnsafeMutablePointer<\(typeName)>(bitPattern: Int(ptr))?.deallocate()
 }
 """
 
@@ -55,8 +53,8 @@ fileprivate static let deinit_jni: deinit_jni_t = { _, _, ptr in
 \(initDecls)
 \(deinitDecls)
 """
-
   }
+  
 }
 
 

@@ -47,6 +47,14 @@ class TypeGenerator<T: TypeDeclSyntax>: SyntaxVisitor {
     return .visitChildren
   }
 
+  override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
+    if node.hashValue != typeDecl.hashValue && node.isExported {
+      nestedTypeGens.append(ClassGenerator(node, settings: settings))
+      return .skipChildren
+    }
+    return .visitChildren
+  }
+
   override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
     if node.hashValue != typeDecl.hashValue && node.isExported {
       nestedTypeGens.append(EnumGenerator(node, settings: settings))

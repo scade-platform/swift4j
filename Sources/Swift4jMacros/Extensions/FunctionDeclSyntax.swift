@@ -26,7 +26,7 @@ extension FunctionDeclSyntax {
 
     let _self = isStatic
       ? "\(typeDecl.typeName).self"
-      : "unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Unmanaged<\(typeDecl.typeName)>.self).takeUnretainedValue()"
+      : "_cast(ptr)"
 
     let (call, stmts) = try makeBridgingFunctionBody()
 
@@ -34,7 +34,7 @@ extension FunctionDeclSyntax {
 """
 fileprivate typealias \(name.text)_jni_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
 fileprivate static let \(name.text)_jni: \(name.text)_jni_t = {\(closureParams.joined(separator: ", ")) in
-  let _self = \(_self)
+  var _self = \(_self)
   \(stmts.joined(separator: "\n  "))
   \(call)
 }

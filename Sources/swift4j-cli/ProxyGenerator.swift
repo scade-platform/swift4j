@@ -33,6 +33,13 @@ class ProxyGenerator: SyntaxVisitor {
     return .skipChildren
   }
 
+  override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
+    if node.isExported  {
+      typeGens.append(ClassGenerator(node, settings: settings))
+    }
+    return .skipChildren
+  }
+
   override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
     if node.isExported  {
       typeGens.append(EnumGenerator(node, settings: settings))

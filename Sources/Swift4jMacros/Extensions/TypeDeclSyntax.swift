@@ -4,7 +4,6 @@ import SwiftSyntaxExtensions
 
 
 extension TypeDeclSyntax {
-
   func fqn(from context: some MacroExpansionContext) -> String {
     var fqn = typeName
     if let moduleName = moduleName(from: context) {
@@ -20,39 +19,72 @@ extension TypeDeclSyntax {
 
     return String(literalSegment.content.text[literalSegment.content.text.startIndex ..< moduleNameSep])
   }
+}
 
-  func expandCreateNativeMethod(name: String, sig: String, fn: String) -> String {
+
+
+extension TypeDeclSyntax {
+  func expandJavaClassDecl(in context: some MacroExpansionContext) -> String {
+    let fqn = fqn(from: context)
     return
 """
-JNINativeMethod2(name: "\(name)", sig: "\(sig)", fn: unsafeBitCast(\(fn), to: UnsafeMutableRawPointer.self))
+public static let javaName = "\(fqn)"
+
+public static let javaClass = {
+  guard let cls = JClass(fqn: javaName) else {
+    fatalError("Could not find \\(javaName) class")
+  }
+  return cls
+} ()
 """
   }
 
+  func expandVarDecls(in context: some MacroExpansionContext) -> String {
+    return exportedDecls.varDecls
+      .compactMap { decl in
+        return context.executeAndWarnIfFails(at: decl) {
+          return try decl.makeBridgingDecls(typeDecl: self)
+        }
+      }
+      .joined(separator: "\n")
+  }
+
+  func expandFuncDecls(in context: some MacroExpansionContext) -> String {
+    return exportedDecls.funcDecls
+      .compactMap { decl in
+        return context.executeAndWarnIfFails(at: decl) {
+          return try decl.makeBridgingDecls(typeDecl: self)
+        }
+      }
+      .joined(separator: "\n")
+  }
+}
+
+
+extension TypeDeclSyntax {
   func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax] = []) -> String {
     let exportedDecls = exportedDecls
 
     let fqn = parents.isEmpty ? typeName : parents.map{$0.typeName}.joined(separator: ".") + "." + typeName
+
+    let varNatives: [String] = exportedDecls.varDecls.flatMap { decl in
+      guard let bridgings = try? decl.bridgings else { return [String]() }
+      return bridgings.map { expandCreateNativeMethod(name: $0.javaName, sig: $0.sig, fn: "\(fqn).\($0.bridgeName)") }
+    }
 
     let funcNatives: [String] = exportedDecls.funcDecls.compactMap {
       guard let jniSig = try? $0.jniSignature() else { return nil }
       return expandCreateNativeMethod(name: "\($0.name.text)Impl", sig: jniSig, fn: "\(fqn).\($0.name.text)_jni")
       }
 
-    let initNatives: [String]
-    if exportedDecls.hasInitDecls {
-      initNatives = exportedDecls.initDecls.enumerated().compactMap {
-        guard let jniSig = try? $1.jniSignature() else { return nil }
-        return expandCreateNativeMethod(name: "init\($0)", sig: jniSig, fn: "\(fqn).init\($0)_jni")
-      }
-    } else {
-      initNatives = [
-        expandCreateNativeMethod(name: "init", sig: "()J", fn: "\(fqn).init_jni")
-      ]
+    let initNatives: [String] = exportedDecls.initDecls.enumerated().compactMap {
+      guard let jniSig = try? $1.jniSignature() else { return nil }
+      return expandCreateNativeMethod(name: "init\($0)", sig: jniSig, fn: "\(fqn).init\($0)_jni")
     }
 
-    let natives = initNatives + [
-      expandCreateNativeMethod(name: "deinit", sig: "(J)V", fn: "\(fqn).deinit_jni")
-    ] + funcNatives
+    let deinitNatives = [ expandCreateNativeMethod(name: "deinit", sig: "(J)V", fn: "\(fqn).deinit_jni")]
+
+    let natives = initNatives + deinitNatives + varNatives + funcNatives
 
     let cls_expr: String
     if parents.isEmpty {
@@ -81,34 +113,15 @@ JNINativeMethod2(name: "\(name)", sig: "\(sig)", fn: unsafeBitCast(\(fn), to: Un
     return exportAttributes.replaceAll(by: registerNatives)
   }
 
-
-  func expandFuncDecls(in context: some MacroExpansionContext) -> String {
-    return exportedDecls.funcDecls
-      .compactMap { decl in
-        return context.executeAndWarnIfFails(at: decl) {
-          return try decl.makeBridgingDecls(typeDecl: self)
-        }
-      }
-      .joined(separator: "\n")
-  }
-
-
-  func expandJavaClassDecl(in context: some MacroExpansionContext) -> String {
-    let fqn = fqn(from: context)
+  func expandCreateNativeMethod(name: String, sig: String, fn: String) -> String {
     return
 """
-public static let javaName = "\(fqn)"
-
-public static let javaClass = {
-  guard let cls = JClass(fqn: javaName) else {
-    fatalError("Could not find \\(javaName) class")
-  }
-  return cls
-} ()
+JNINativeMethod2(name: "\(name)", sig: "\(sig)", fn: unsafeBitCast(\(fn), to: UnsafeMutableRawPointer.self))
 """
   }
-  
 }
+
+
 
 fileprivate extension AttributeListSyntax {
   func replaceAll(by syntax: String) -> String {

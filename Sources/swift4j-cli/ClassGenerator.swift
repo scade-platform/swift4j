@@ -4,11 +4,20 @@ import SwiftParser
 import SwiftSyntaxExtensions
 
 
-class ClassGenerator: TypeGenerator<ClassDeclSyntax> {
-  private var ctorGens: [CtorGenerator] = []
-  private var hasCtors: Bool = false
+class ClassGenerator<T: TypeDeclSyntax>: TypeGenerator<T> {
+  private var varGens: [VarGenerator] = []
   private var methodGens: [MethodGenerator] = []
 
+  private var ctorGens: [CtorGenerator] {
+    typeDecl.initializers.map { CtorGenerator($0, className: name) }
+  }
+
+  override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
+    if node.isExported && node.parentDecl?.isExported ?? true {
+      varGens.append(VarGenerator(node, className: name))
+    }
+    return .skipChildren
+  }
 
   override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
     if node.isExported && node.parentDecl?.isExported ?? true {
@@ -16,31 +25,12 @@ class ClassGenerator: TypeGenerator<ClassDeclSyntax> {
     }
     return .skipChildren
   }
-
-  override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
-    if node.isExported && node.parentDecl?.isExported ?? true {
-      ctorGens.append(CtorGenerator(node, className: name))
-    }
-    hasCtors = true
-    return .skipChildren
-  }
 }
 
 
 extension ClassGenerator: TypeGeneratorProtocol {
   func generate(with ctx: inout Context) -> String {
-    let ctors: String
-    if hasCtors {
-      ctors = ctorGens.enumerated().map{$1.generate(with: &ctx, index: $0)}.joined(separator: "\n\n")
-    } else {
-      ctors =
-"""
-  public \(name)() {
-    this(\(name).init());
-  }
-  private static native long init();
-"""
-    }
+    let ctors = ctorGens.enumerated().map{$1.generate(with: &ctx, index: $0)}.joined(separator: "\n\n")
 
     let std_ctor_dtor: String
     if settings.javaVersion >= 9 {
@@ -115,6 +105,8 @@ public \(nested ? "static" : "") class \(name) {
   private static native void deinit(long ptr);
 
 \(ctors)
+
+\(varGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
 
 \(methodGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
 

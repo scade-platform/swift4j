@@ -14,11 +14,14 @@ public struct JvmMacro {
     if let classDecl = decl.as(ClassDeclSyntax.self) {
       return classDecl
 
+    } else if let structDecl = decl.as(StructDeclSyntax.self) {
+      return structDecl
+
     } else if let enumDecl = decl.as(EnumDeclSyntax.self) {
       return enumDecl
 
     } else {
-      throw JvmMacrosError.message("@jvm macro can only be applied to a class declaration")
+      throw JvmMacrosError.message("@jvm macro can only be applied to a class, struct or enum declaration")
     }
   }
 

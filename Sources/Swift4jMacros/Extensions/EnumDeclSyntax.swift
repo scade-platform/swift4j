@@ -9,7 +9,9 @@ import SwiftSyntaxExtensions
 
 
 extension EnumDeclSyntax: JvmTypeDeclSyntax {
-  func expandMembers(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+  var shouldExpandMemberDecls: Bool { false }
+
+  func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String {
     let toJavaCases = cases().map{
 """
 case .\($0): return Self.javaClass.getStatic(field: "\($0)", sig: "L\(fqn(from: context));")?.ptr
@@ -22,11 +24,8 @@ case \($0.offset): return .\($0.element)
 """
     }.joined(separator: "\n")
 
-
-    let syntax =
+    return
 """
-\(expandJavaClassDecl(in: context))
-
 public static func fromJavaObject(_ obj: JavaObject?) -> \(typeName) {
   let ordinal: Int32 = JObject(obj!).get(field: "ordinal")
   switch ordinal {
@@ -43,13 +42,10 @@ public func toJavaObject() -> JavaObject? {
 }
 
 """
-    
-// \(expandFuncDecls(in: context))
-    return ["\(raw: syntax)"]
   }
-
-  func expandPeer(in context: some MacroExpansionContext) -> [DeclSyntax] {
-    return []
+  
+  func expandCtorDecls(in context: some MacroExpansionContext) throws -> String {
+    ""
   }
 }
 

@@ -11,7 +11,7 @@ extension InitializerDeclSyntax {
     try "(\(signature.jniParams().joined()))J"
   }
 
-  func makeBridgingDecls(classDecl: ClassDeclSyntax, index: Int) throws -> String {
+  func makeBridgingDecls(typeDecl: any TypeDeclSyntax, index: Int) throws -> String {
     let name = "init\(index)"
     let paramTypes = try ["UnsafeMutablePointer<JNIEnv>", "JavaClass?"] + signature.parameterClause.parameters.map{ try $0.type.jniType() }
     let closureParams = ["_", "_"] + signature.parameterClause.parameters.map{ $0.name }
@@ -23,8 +23,8 @@ extension InitializerDeclSyntax {
 fileprivate typealias \(name)_jni_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> JavaLong
 fileprivate static let \(name)_jni: \(name)_jni_t = {\(closureParams.joined(separator: ", ")) in
   \(stmts.joined(separator: "\n  "))
-  let obj = \(classDecl.name.text)(\(params))
-  return unsafeBitCast(Unmanaged.passRetained(obj), to: JavaLong.self)
+  let obj = \(typeDecl.name.text)(\(params))
+  return obj._cast()
 }
 """
   }
