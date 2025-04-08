@@ -9,7 +9,7 @@ class ClassGenerator<T: TypeDeclSyntax>: TypeGenerator<T> {
   private var methodGens: [MethodGenerator] = []
 
   private var ctorGens: [CtorGenerator] {
-    typeDecl.initializers.map { CtorGenerator($0, className: name) }
+    typeDecl.exportedInitializers.map { CtorGenerator($0, className: name) }
   }
 
   override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {

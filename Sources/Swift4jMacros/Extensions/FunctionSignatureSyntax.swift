@@ -13,11 +13,28 @@ extension FunctionSignatureSyntax {
 
   func paramsMapping() throws -> MappingRetType {
     let mapping = try parameterClause.parameters
-      .reduce(into: ([String](), [String]())) {
-        let (param, stmts) = try $1.fromJava()
-        $0.0.append(param)
-        $0.1.append(contentsOf: stmts)
+      .reduce(into: (mapped: [String](), stmts: [String](), post: [MappingRetType.PostFunc]())) {
+        let mapping = try $1.fromJava()
+
+        $0.mapped.append(mapping.mapped)
+        $0.stmts.append(contentsOf: mapping.stmts)
+
+        if let post = mapping.post {
+          $0.post.append(post)
+        }
       }
-    return (mapping.0.joined(separator: ","), mapping.1)
+
+    let post: MappingRetType.PostFunc?
+    if let head = mapping.post.first {      
+      post = mapping.post.dropFirst().reduce(head) { pre, cur in
+        { cur(pre($0)) }
+      }
+    } else {
+      post = nil
+    }
+
+    return MappingRetType(mapped: mapping.mapped.joined(separator: ","),
+                          stmts: mapping.stmts,
+                          post: post)
   }
 }

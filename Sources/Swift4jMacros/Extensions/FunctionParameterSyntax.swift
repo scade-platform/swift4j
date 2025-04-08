@@ -6,7 +6,28 @@ import SwiftDiagnostics
 import SwiftSyntaxExtensions
 
 
-typealias MappingRetType = (mapped: String, stmts: [String])
+struct MappingRetType {
+  typealias PostFunc = (String) -> String
+
+  let mapped: String
+  let stmts: [String]
+  let post: PostFunc?
+
+  init(mapped: String, stmts: [String] = [], post: PostFunc? = nil) {
+    self.mapped = mapped
+    self.stmts = stmts
+    self.post = post
+  }
+
+  /*
+  func join(post: PostFunc?) -> PostFunc? {
+    guard let post = post else { return self.post }
+    guard let pre_post = self.post else { return post }
+    
+    return { post(pre_post($0)) }
+  }
+  */
+}
 
 
 extension FunctionParameterSyntax {
@@ -15,14 +36,19 @@ extension FunctionParameterSyntax {
   func toJava() throws -> MappingRetType {
     try type.toJava(name)
   }
+
   func fromJava() throws -> MappingRetType {
-    let (mapped, stmts) = try type.fromJava(name)
+    let mapping = try type.fromJava(name)
 
     switch firstName.tokenKind {
     case .identifier(name):
-      return ("\(name): \(mapped)", stmts)
+      return MappingRetType(mapped: "\(name): \(mapping.mapped)",
+                            stmts: mapping.stmts,
+                            post: mapping.post)
+
     case .wildcard:
-      return (mapped, stmts)
+      return mapping
+
     default:
       throw JvmMacrosError.message("Unsupported function parameter syntax")
     }

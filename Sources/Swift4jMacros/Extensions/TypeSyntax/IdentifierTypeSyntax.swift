@@ -48,26 +48,33 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
   }
 
   func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
-    return (isPrimitive && !primitivesAsObjects ? expr : "\(expr).toJavaObject()", [])
+    if isPrimitive && !primitivesAsObjects {
+      return MappingRetType(mapped: name.text == "Int" ? "JavaLong(\(expr))" : expr)
+    } else {
+      return MappingRetType(mapped: "\(expr).toJavaObject()")
+    }
   }
 
   func fromJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
-    if isPrimitive {
-      if primitivesAsObjects && !isVoid {
-        let _expr = "(\(expr) as \(name.text).PrimitiveType).value"
-        return (name.text == "Int" ? "Int(\(_expr))" : _expr, [])
-
-      } else {
-        return (name.text == "Int" ? "Int(\(expr))" : expr, [])
+    if isPrimitive && !primitivesAsObjects {
+      return MappingRetType(mapped: name.text == "Int" ? "Int(\(expr))" : expr)
+    } else if isInOut {
+      return MappingRetType(mapped: "&$0.pointee") {
+"""
+\(name.text).fromJavaObject(\(expr)) {
+  \($0)
+}
+"""
       }
     } else {
       let _expr = "\(name.text).fromJavaObject(\(expr))"
 
       guard let paramName = typedEntityName else {
-        return (_expr, [])
+        return MappingRetType(mapped: _expr)
       }
 
-      return ("_\(paramName)", ["let _\(paramName) = \(_expr)"])
+      return MappingRetType(mapped: "_\(paramName)",
+                            stmts: ["let _\(paramName) = \(_expr)"])
     }
   }
 }

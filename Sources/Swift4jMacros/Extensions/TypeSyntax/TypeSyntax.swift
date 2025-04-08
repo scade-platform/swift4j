@@ -17,10 +17,12 @@ extension TypeSyntax {
     } else if let typeSyntax = self.as(ArrayTypeSyntax.self) {
       return typeSyntax
 
+    } else if let typeSyntax = self.as(OptionalTypeSyntax.self) {
+      return typeSyntax
+
     } else if let attributedTypeSyntax = self.as(AttributedTypeSyntax.self) {
       return try attributedTypeSyntax.baseType.map()
     }
-
 
     throw JvmMacrosError.message("Unsupported type", self)
   }
@@ -62,5 +64,24 @@ extension JvmMappedTypeSyntax {
       return funcParam.name
     }
     return nil
+  }
+}
+
+
+extension JvmMappedTypeSyntax {
+  var attributedType: AttributedTypeSyntax? {
+    parent?.as(AttributedTypeSyntax.self)
+  }
+
+  var isInOut: Bool {
+    attributedType?.specifiers.contains {
+      if case .simpleTypeSpecifier(let specSyntax) = $0 {
+        return specSyntax.specifier.tokenKind == .keyword(.inout)
+
+      } else {
+        return false
+      }
+
+    } ?? false
   }
 }

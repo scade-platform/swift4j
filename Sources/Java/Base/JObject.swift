@@ -86,6 +86,8 @@ public class JObject: @unchecked Sendable {
     return call(method: method, sig: sig, args.map{$0.toJavaParameter()}) as Void
   }
 
+
+
   public func call<T>(method: JavaMethodID, _ args: [JavaParameter]) -> T where T: JConvertible {
     return T.fromMethod(method, on: ptr, args: args)
   }
@@ -111,6 +113,19 @@ public class JObject: @unchecked Sendable {
   public func call<T>(method: String, _ args : JConvertible...) -> T where T: JConvertible {
     let sig = "(\(args.reduce("", { $0 + type(of: $1).javaSignature})))\(T.javaSignature)"
     return call(method: method, sig: sig, args.map{$0.toJavaParameter()})
+  }
+
+
+
+  public func callObjectMethod(method: JavaMethodID, _ args : [JavaParameter]) -> JavaObject? {
+    return jni.CallObjectMethod(ptr, method, args)
+  }
+
+  public func callObjectMethod(method: String, sig: String, _ args : [JavaParameter]) -> JavaObject? {
+    guard let methodId = cls.getMethodID(name: method, sig: sig) else  {
+      fatalError("Cannot find method \"\(method)\" with signature \"\(sig)\"")
+    }
+    return callObjectMethod(method: methodId, args) as JavaObject?
   }
 }
 

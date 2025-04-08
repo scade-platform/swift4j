@@ -9,7 +9,7 @@ import SwiftSyntaxExtensions
 
 
 public struct JvmMacro {
-
+  
   static func typeDecl(from decl: some DeclSyntaxProtocol) throws -> any JvmTypeDeclSyntax {
     if let classDecl = decl.as(ClassDeclSyntax.self) {
       return classDecl

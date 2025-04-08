@@ -7,26 +7,35 @@ import SwiftSyntaxExtensions
 
 
 extension StructDeclSyntax: JvmTypeDeclSyntax {
+  var selfExpr: String {
+    "_self(ptr).pointee"
+  }
+
   func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String {
     return
 """
-private static func _cast(_ ptr: JavaLong) -> Self {
-  return UnsafeMutablePointer<\(typeName)>(bitPattern: Int(truncatingIfNeeded: ptr))!.pointee
+private static func _self(_ obj: JavaObject?) -> UnsafeMutablePointer<\(typeName)> {
+  let ptr: JavaLong = JObject(obj!).get(field: "_ptr")
+  return _self(ptr) 
 }
 
-private func _cast() -> JavaLong {
-  let ptr = UnsafeMutablePointer<\(typeName)>.allocate(capacity: 1)
-  ptr.initialize(to: self)
-  return JavaLong(Int(bitPattern: ptr))
+private static func _self(_ ptr: JavaLong) -> UnsafeMutablePointer<\(typeName)> {
+  return UnsafeMutablePointer<\(typeName)>(bitPattern: Int(truncatingIfNeeded: ptr))! 
+}
+
+public static func fromJavaObject<R>(_ obj: JavaObject?, closure: (UnsafeMutablePointer<\(typeName)>) -> R) -> R {
+  let _self = _self(obj)
+  return closure(_self)
 }
 
 public static func fromJavaObject(_ obj: JavaObject?) -> Self {
-  let ptr: JavaLong = JObject(obj!).get(field: "_ptr")
-  return _cast(ptr)
+  return _self(obj).pointee
 }
 
 public func toJavaObject() -> JavaObject? {
-  return \(typeName).javaClass.create(self._cast())  
+  let ptr = UnsafeMutablePointer<\(name.text)>.allocate(capacity: 1)
+  ptr.initialize(to: self)  
+  return \(typeName).javaClass.create(Int(bitPattern: ptr))  
 }
 """
   }
@@ -54,7 +63,14 @@ fileprivate static let deinit_jni: deinit_jni_t = { _, _, ptr in
 \(deinitDecls)
 """
   }
-  
+
+  func expandInitCall(params: String) -> String {
+"""
+let ptr = UnsafeMutablePointer<\(name.text)>.allocate(capacity: 1)
+ptr.initialize(to: .init(\(params)))
+return JavaLong(Int(bitPattern: ptr))
+"""
+  }
 }
 
 

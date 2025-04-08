@@ -40,52 +40,50 @@ extension VariableDeclSyntax {
     }
   }
 
-  func makeBridgingDecls(typeDecl: any TypeDeclSyntax) throws -> String {
+  func makeBridgingDecls(typeDecl: any JvmTypeDeclSyntax) throws -> String {
     let _self = isStatic
       ? "\(typeDecl.typeName).self"
-      : "_cast(ptr)"
+      : typeDecl.selfExpr
 
     return try decls.flatMap {
-      [try makeBridgingGetter(for: $0, _self: _self)]
-        + (isReadonly ? [] : [try makeBridgingSetter(for: $0, _self: _self)])
+      [try makeBridgingGetter(for: $0, selfExpr: _self)]
+        + (isReadonly ? [] : [try makeBridgingSetter(for: $0, selfExpr: _self)])
     }.joined(separator: "\n")
   }
 
-  private func makeBridgingSetter(for varDecl: VarDecl, _self: String) throws -> String {
+  private func makeBridgingSetter(for varDecl: VarDecl, selfExpr: String) throws -> String {
     let bridgeName = "\(varDecl.name)_set_jni"
     let paramTypes = defaultParamTypes + [try varDecl.type.jniType()]
     let returnType = "Void"
     let varParamName = "value"
     let closureParams = defaultClosureParams + [varParamName]
     
-    let (mapped, stmts) = try varDecl.type.fromJava(varParamName)
+    let mapping = try varDecl.type.fromJava(varParamName)
 
     return
 """
 fileprivate typealias \(bridgeName)_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
-fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in
-  var _self = \(_self)
-  \(stmts.joined(separator: "\n  "))
-  _self.\(varDecl.name) = \(mapped)
+fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in  
+  \(mapping.stmts.joined(separator: "\n  "))
+  \(selfExpr).\(varDecl.name) = \(mapping.mapped)
 }
 """
   }
 
-  private func makeBridgingGetter(for varDecl: VarDecl, _self: String) throws -> String {
+  private func makeBridgingGetter(for varDecl: VarDecl, selfExpr: String) throws -> String {
     let bridgeName = "\(varDecl.name)_get_jni"
     let paramTypes = defaultParamTypes
     let returnType = try varDecl.type.jniType()
     let closureParams = defaultClosureParams
     
-    let (mapped, stmts) = try varDecl.type.toJava("_self.\(varDecl.name)")
-    
+    let mapping = try varDecl.type.toJava("\(selfExpr).\(varDecl.name)")
+
     return
 """
 fileprivate typealias \(bridgeName)_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
-fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in  
-  let _self = \(_self)
-  \(stmts.joined(separator: "\n  "))
-  return \(mapped)
+fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in    
+  \(mapping.stmts.joined(separator: "\n  "))
+  return \(mapping.mapped)
 }
 """
   }

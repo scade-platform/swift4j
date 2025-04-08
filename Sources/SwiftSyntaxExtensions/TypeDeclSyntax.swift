@@ -4,12 +4,12 @@ import SwiftSyntax
 public protocol TypeDeclSyntax: ExportableDeclSyntax, DeclGroupSyntax, SyntaxHashable {
   var name: TokenSyntax { get }
 
-  var initializers: [InitializerDeclSyntax] { get }
+  var exportedInitializers: [InitializerDeclSyntax] { get }
 }
 
 
 public extension TypeDeclSyntax {
-  var initializers: [InitializerDeclSyntax] { [] }
+  var exportedInitializers: [InitializerDeclSyntax] { [] }
 }
 
 
@@ -23,7 +23,7 @@ public extension TypeDeclSyntax {
 
   var isExported: Bool { !exportAttributes.isEmpty }
 
-  var exportAttributes: AttributeListSyntax {
+  var exportAttributes: AttributeListSyntax {    
     let attrs = findAttributes(name: "jvm")
     return AttributeListSyntax(attrs)
   }
@@ -40,8 +40,15 @@ public extension TypeDeclSyntax {
     return parents.reversed()
   }
 
+  var initializers: [InitializerDeclSyntax] {
+    memberBlock.members.compactMap {
+      guard let initDecl = $0.decl.as(InitializerDeclSyntax.self) else { return nil }
+      return initDecl
+    }
+  }
+
   var exportedDecls: ExportedDecls {
-    var decls: ExportedDecls = (initializers, [], [], [])
+    var decls: ExportedDecls = (exportedInitializers, [], [], [])
 
     guard isExported else { return decls }
 
@@ -66,15 +73,6 @@ public extension TypeDeclSyntax {
     return decls
   }
 
-  var exportedInitializers: [InitializerDeclSyntax] {
-    memberBlock.members.compactMap {
-      guard let initDecl = $0.decl.as(InitializerDeclSyntax.self), initDecl.isExported else {
-        return nil
-      }
-      return initDecl
-    }
-  }
-
   func createInitializer(parameters: [FunctionParameterSyntax]) -> InitializerDeclSyntax {
     let paramsClause = FunctionParameterClauseSyntax(parameters: FunctionParameterListSyntax(parameters))
     return InitializerDeclSyntax(signature: FunctionSignatureSyntax(parameterClause: paramsClause))
@@ -84,26 +82,35 @@ public extension TypeDeclSyntax {
 
 
 extension ClassDeclSyntax: TypeDeclSyntax {
-  public var initializers: [InitializerDeclSyntax] {
-    let exported = exportedInitializers
+  public var exportedInitializers: [InitializerDeclSyntax] {
+    let initializers = initializers
 
-    if exported.isEmpty {
+    if initializers.isEmpty {
       return [createInitializer(parameters: [])]
 
     } else {
-      return exported
+      return initializers.filter { $0.isExported }
     }
   }
 }
 
 extension StructDeclSyntax: TypeDeclSyntax {
-  public var initializers: [InitializerDeclSyntax] {
-    let exported = exportedInitializers
+  public var exportedInitializers: [InitializerDeclSyntax] {
+    let initializers = initializers
 
-    if exported.isEmpty {
-      let varDecls: [VariableDeclSyntax] = memberBlock.members.compactMap {
-        guard let varDecl = $0.decl.as(VariableDeclSyntax.self) else { return nil }
-        return varDecl
+    if initializers.isEmpty {
+      var varDecls: [VariableDeclSyntax] = []
+
+      for member in memberBlock.members {
+        if let varDecl = member.decl.as(VariableDeclSyntax.self) {
+          if varDecl.isExported {
+            varDecls.append(varDecl)
+          } else if (varDecl.bindings.contains {$0.initializer == nil}) {
+            // If there is a non-exported and non-initialized var in the struct,
+            // do not generate any default init as it would need to expose such var
+            return []
+          }
+        }
       }
 
       let params = varDecls.flatMap {
@@ -118,7 +125,7 @@ extension StructDeclSyntax: TypeDeclSyntax {
       return [createInitializer(parameters: params)]
 
     } else {
-      return exported
+      return initializers.filter { $0.isExported }
     }
   }
 }

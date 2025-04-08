@@ -47,5 +47,9 @@ public func toJavaObject() -> JavaObject? {
   func expandCtorDecls(in context: some MacroExpansionContext) throws -> String {
     ""
   }
+
+  func expandInitCall(params: String) -> String {
+    ""
+  }
 }
 

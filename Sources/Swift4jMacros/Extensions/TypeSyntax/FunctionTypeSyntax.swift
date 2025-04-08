@@ -39,7 +39,7 @@ extension FunctionTypeSyntax: JvmMappedTypeSyntax {
 
   func jniType(primitivesAsObjects: Bool) -> String { "JavaObject?" }
 
-  func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType { ("nil", []) }
+  func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType { MappingRetType(mapped: "nil") }
 
   func fromJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
     let paramName = try paramName()
@@ -49,37 +49,51 @@ extension FunctionTypeSyntax: JvmMappedTypeSyntax {
       "let _\(paramName) = JObject(\(paramName))"
     ]
 
-    let (closure_call, closure_stmts) = try makeBridgingClosureBody()
-
-
     let closure_param =
 """
 {
-  \(closure_stmts.joined(separator: "\n  "))
-  \(closure_call)
+\(try makeBridgingClosureBody())
 }
 """
-    return (closure_param, stmts)
+    return MappingRetType(mapped: closure_param, stmts: stmts)
   }
 
-  func makeBridgingClosureBody() throws -> (call: String, stmts: [String]) {
+  func makeBridgingClosureBody() throws -> String {
     let mapping = try parameters.enumerated()
       .reduce(into: ([String](), [String]())) {
-        let (param, stmts) = try $1.1.type.toJava("$\($1.0)", primitivesAsObjects: true)
-        $0.0.append("JavaParameter(object: \(param))")
-        $0.1.append(contentsOf: stmts)
+        let mapping = try $1.1.type.toJava("$\($1.0)", primitivesAsObjects: true)
+        $0.0.append("JavaParameter(object: \(mapping.mapped))")
+        $0.1.append(contentsOf: mapping.stmts)
       }
 
-    let params_stmts = [
+    var stmts = mapping.1
+
+    stmts.append(
       "let params: [JavaParameter] = [\(mapping.0.joined(separator: ","))]"
-    ]
+    )
 
     let method = try javaCallMethod()
 
-    let call = "_\(try paramName()).call(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
-    let call_ret = try returnClause.type.fromJava(call, primitivesAsObjects: true)
 
-    return ("return \(call_ret.0)", mapping.1 + params_stmts + call_ret.1)
+    let call: String
+    if isVoid {
+      call = "_\(try paramName()).call(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
+
+    } else {
+      stmts.append(
+        "let res: JavaObject? = _\(try paramName()).callObjectMethod(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
+      )
+      let call_ret = try returnClause.type.fromJava("res", primitivesAsObjects: true)
+      
+      call = "return \(call_ret.mapped)"
+      stmts.append(contentsOf: call_ret.stmts)
+    }
+
+    return
+"""
+\(stmts.joined(separator: "\n  "))
+\(call)
+"""
   }
 }
 

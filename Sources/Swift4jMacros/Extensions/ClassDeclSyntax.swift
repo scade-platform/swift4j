@@ -7,22 +7,27 @@ import SwiftSyntaxExtensions
 
 
 extension ClassDeclSyntax: JvmTypeDeclSyntax {
-  
+
   func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String {
 """
 private let jref: JObjectRef<\(typeName)> = .init()
 
-private static func _cast(_ ptr: JavaLong) -> Self {
+private static func _self(_ obj: JavaObject?) -> Self {
+  let ptr: JavaLong = JObject(obj!).get(field: "_ptr")
+  return _self(ptr)
+}
+
+private static func _self(_ ptr: JavaLong) -> Self {  
   return unsafeBitCast(Int(truncatingIfNeeded: ptr), to: Unmanaged<Self>.self).takeUnretainedValue()
 }
 
-private func _cast() -> JavaLong {
-  return unsafeBitCast(Unmanaged.passRetained(self), to: JavaLong.self)
+public static func fromJavaObject<R>(_ obj: JavaObject?, closure: (UnsafeMutablePointer<\(typeName)>) -> R) -> R {
+  var _self = _self(obj)
+  return closure(&_self)
 }
 
 public static func fromJavaObject(_ obj: JavaObject?) -> Self {
-  let ptr: Int = JObject(obj!).get(field: "_ptr")
-  return unsafeBitCast(ptr, to: Unmanaged<Self>.self).takeUnretainedValue()
+  return _self(obj)  
 }
 
 public func toJavaObject() -> JavaObject? {
@@ -56,6 +61,13 @@ fileprivate static let deinit_jni: deinit_jni_t = { _, _, ptr in
 \(deinitDecls)
 """
 
+  }
+
+  func expandInitCall(params: String) -> String {
+"""
+let obj = \(name.text)(\(params))
+return unsafeBitCast(Unmanaged.passRetained(obj), to: JavaLong.self)
+"""
   }
 }
 
