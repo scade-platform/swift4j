@@ -199,30 +199,45 @@ After the generation, the briging files can be built and used as normal Java sou
 
 ## Language Features Support
 
-Currently the following types can be exposed:
+Non-generic types (marked by `@jvm` macro):
 
-- Any non-generic class marked by `@jvm` macro
+- Classes
 
-- Any non-generic nested class marked by `@jvm` macro contained inside an exposed class (>= Swift 6.0)
+- Structs
 
-- Any primitive type
+- Enums without associated types
+
+- Nested types (if parent type is also exposed)
+
+Built-in types:
+
+- Primitive types
 
 - Arrays of exposed types
 
-- Any lambda only containing exposed types in its signature
+- Lambdas (if all signature types are exposed)
   
-- Enums without associated types   
-
-The following class members are supported if and only if its signatures only contain exposed types:
+Non-private type members (if and only if its signatures only contain exposed types):
 
 - Initialisers
 
 - Instance methods
   
-  - `async` methods are supported and are called asynchronously 
+  - `async` methods (called asynchronously)
+  - `inout` parameters
 
 - Static methods
+
+- Properties
+
   
+Work in Progress:
+
+- Overloading
+
+- Error handling (`throws`)
+
+- Extensions
   
 ## Examples
 
