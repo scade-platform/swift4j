@@ -12,7 +12,7 @@ extension FunctionDeclSyntax {
     return "(\(params.joined()))\(try signature.returnClause?.type.jniSignature() ?? "V")"
   }
 
-  func makeBridgingDecls(typeDecl: any JvmTypeDeclSyntax) throws -> String {
+  func makeBridgingDecls(typeDecl: any JvmTypeDeclSyntax, num: Int? = nil) throws -> String {
     let paramTypes = try
       ["UnsafeMutablePointer<JNIEnv>"]
         + (isStatic ? ["JavaClass?"] : ["JavaObject?", "JavaLong"])
@@ -28,10 +28,16 @@ extension FunctionDeclSyntax {
       ? "\(typeDecl.typeName).self"
       : typeDecl.selfExpr
 
+    var name = name.text
+
+    if let num = num {
+      name += "_\(num)"
+    }
+
     return
 """
-fileprivate typealias \(name.text)_jni_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
-fileprivate static let \(name.text)_jni: \(name.text)_jni_t = {\(closureParams.joined(separator: ", ")) in
+fileprivate typealias \(name)_jni_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
+fileprivate static let \(name)_jni: \(name)_jni_t = {\(closureParams.joined(separator: ", ")) in
 \(try makeBridgingFunctionBody(selfExpr: _self))
 }
 """
