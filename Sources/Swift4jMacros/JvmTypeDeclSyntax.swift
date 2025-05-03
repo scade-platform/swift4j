@@ -102,9 +102,10 @@ public static let javaClass = {
 
   func expandFuncDecls(in context: some MacroExpansionContext) -> String {
     return exportedDecls.funcDecls
-      .compactMap { decl in
+      .enumerated()
+      .compactMap { i, decl in
         return context.executeAndWarnIfFails(at: decl) {
-          return try decl.makeBridgingDecls(typeDecl: self)
+          return try decl.makeBridgingDecls(typeDecl: self, num: i)
         }
       }
       .joined(separator: "\n")
@@ -123,9 +124,9 @@ extension JvmTypeDeclSyntax {
       return bridgings.map { expandCreateNativeMethod(name: $0.javaName, sig: $0.sig, fn: "\(fqn).\($0.bridgeName)") }
     }
 
-    let funcNatives: [String] = exportedDecls.funcDecls.compactMap {
-      guard let jniSig = try? $0.jniSignature() else { return nil }
-      return expandCreateNativeMethod(name: "\($0.name.text)Impl", sig: jniSig, fn: "\(fqn).\($0.name.text)_jni")
+    let funcNatives: [String] = exportedDecls.funcDecls.enumerated().compactMap {
+      guard let jniSig = try? $1.jniSignature() else { return nil }
+      return expandCreateNativeMethod(name: "\($1.name.text)Impl", sig: jniSig, fn: "\(fqn).\($1.name.text)_\($0)_jni")
       }
 
     let initNatives: [String] = exportedDecls.initDecls.enumerated().compactMap {
