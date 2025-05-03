@@ -323,6 +323,8 @@ public struct JNI {
   public func ExceptionClear() { env { $0.ExceptionClear($1) } }
   public func ExceptionDescribe() { env { $0.ExceptionDescribe($1) } }
 
+  public func Throw(_ ex: JavaThrowable) -> Bool { env { $0.Throw($1, ex) } == 0 }
+  public func ThrowNew(_ cls: JavaClass, _ msg: String) -> Bool { env { $0.ThrowNew($1, cls, msg) } == 0 }
 
   public func RegisterNatives(_ cls: JavaClass, _ methods: [JNINativeMethod]) -> JavaInt { env { $0.RegisterNatives($1, cls, methods, JavaInt(methods.count)) } }
 
@@ -333,8 +335,6 @@ public struct JNI {
 
 
 // MARK: - Extensions
-
-public typealias JNINativeMethod2 = (name: String, sig: String, fn: UnsafeMutableRawPointer)
 
 extension JNI {
   struct JNIError: Error {
@@ -356,7 +356,36 @@ extension JNI {
     }
   }
 
-  public func RegisterNatives(_ cls: JavaClass,
+  public func throwException(_ error: Error) {
+    guard let cls = FindClass("java/lang/Exception") else {
+      fatalError("Cannot find exception class")
+    }
+    guard ThrowNew(cls, "\(error)") else {
+      fatalError("Throwing an exception failed")
+    }
+  }
+}
+
+public extension JNINativeMethod {
+  init<T>(name: StaticString, sig: StaticString, fn: T) {
+    let fn_ptr = unsafeBitCast(fn, to: UnsafeMutableRawPointer.self)
+    self.init(name: name, sig: sig, fnPtr: fn_ptr)
+  }
+
+  init(name: StaticString, sig: StaticString, fnPtr: UnsafeMutableRawPointer) {
+    let name_ptr = UnsafeRawPointer(name.utf8Start).assumingMemoryBound(to: Int8.self)
+    let sig_ptr = UnsafeRawPointer(sig.utf8Start).assumingMemoryBound(to: Int8.self)
+
+    self.init(name: name_ptr, signature: sig_ptr, fnPtr: fnPtr)
+  }
+}
+
+
+public typealias JNINativeMethod2 = (name: String, sig: String, fn: UnsafeMutableRawPointer)
+
+
+public extension JNI {
+  func RegisterNatives(_ cls: JavaClass,
                               _ methods: [JNINativeMethod2],
                               _ nativeMethods: [JNINativeMethod] = []) -> JavaInt {
 
@@ -375,21 +404,7 @@ extension JNI {
   }
 }
 
+
 extension JavaObject : JParameterConvertible {
   public func toJavaParameter()  -> JavaParameter { JavaParameter(object: self) }
-}
-
-
-public extension JNINativeMethod {
-  init<T>(name: StaticString, sig: StaticString, fn: T) {
-    let fn_ptr = unsafeBitCast(fn, to: UnsafeMutableRawPointer.self)
-    self.init(name: name, sig: sig, fnPtr: fn_ptr)
-  }
-
-  init(name: StaticString, sig: StaticString, fnPtr: UnsafeMutableRawPointer) {
-    let name_ptr = UnsafeRawPointer(name.utf8Start).assumingMemoryBound(to: Int8.self)
-    let sig_ptr = UnsafeRawPointer(sig.utf8Start).assumingMemoryBound(to: Int8.self)
-
-    self.init(name: name_ptr, signature: sig_ptr, fnPtr: fnPtr)
-  }
 }

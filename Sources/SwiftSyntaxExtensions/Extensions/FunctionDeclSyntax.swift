@@ -7,6 +7,14 @@ extension FunctionDeclSyntax: ExportableDeclSyntax {
       $0.name.text == "static"
     }
   }
+
+  public var isAsync: Bool {
+    signature.effectSpecifiers?.asyncSpecifier != nil
+  }
+
+  public var isThrowing: Bool {
+    signature.effectSpecifiers?.throwsClause != nil
+  }
 }
 
 

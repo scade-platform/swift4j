@@ -8,19 +8,23 @@ import SwiftSyntaxExtensions
 
 extension OptionalTypeSyntax: JvmMappedTypeSyntax {
   func jniSignature(primitivesAsObjects: Bool) throws -> String {
-    return try wrappedType.jniSignature(primitivesAsObjects: true)
+    try wrappedType.jniSignature(primitivesAsObjects: true)
   }
   
   func jniType(primitivesAsObjects: Bool) throws -> String {
-    return "JavaObject?"
+    "JavaObject?"
   }
-  
+
+  func jniTypeDefaultValue(primitivesAsObjects: Bool) throws -> String {
+    "nil"
+  }
+
   func toJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
-    return MappingRetType(mapped: "\(expr).toJavaObject()")
+    MappingRetType(mapped: "\(expr).toJavaObject()")
   }
   
   func fromJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
-    return MappingRetType(mapped: "\(_syntaxNode.trimmedDescription).fromJavaObject(\(expr))")
+    MappingRetType(mapped: "\(_syntaxNode.trimmedDescription).fromJavaObject(\(expr))")
   }
 
 }

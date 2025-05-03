@@ -41,8 +41,12 @@ fileprivate static let \(name.text)_jni: \(name.text)_jni_t = {\(closureParams.j
     let mapping = try signature.paramsMapping()
     var call = "\(selfExpr).\(name.text)(\(mapping.mapped))"
 
-    if signature.effectSpecifiers?.asyncSpecifier != nil {
-      call = "Task { await \(call) }"
+    if isAsync {
+      call = "await \(call)"
+    }
+
+    if isThrowing {
+      call = "try \(call)"
     }
 
     var stmts = mapping.stmts
@@ -58,6 +62,34 @@ fileprivate static let \(name.text)_jni: \(name.text)_jni_t = {\(closureParams.j
         post = (post == nil) ? ret_post : { ret_post(post!($0)) }
       }
     }
+
+    if isThrowing {
+      call =
+"""
+  do { 
+    \(call) 
+  } catch { 
+    jni.throwException(error) 
+  }
+"""
+      if let retDefault = try signature.returnClause?.type.jniTypeDefaultValue() {
+        call =
+"""
+  \(call)
+  return \(retDefault)
+"""
+      }
+    }
+
+    if isAsync {
+      call =
+"""
+  Task { 
+    \(call)
+  }
+"""
+    }
+
 
     let body =
 """
