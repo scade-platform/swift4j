@@ -47,6 +47,14 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
     }
   }
 
+  func jniTypeDefaultValue(primitivesAsObjects: Bool) throws -> String {
+    if !isPrimitive || primitivesAsObjects {
+      return "nil"
+    } else {
+      return "\(jniType(primitivesAsObjects: primitivesAsObjects))()"
+    }
+  }
+
   func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
     if isPrimitive && !primitivesAsObjects {
       return MappingRetType(mapped: name.text == "Int" ? "JavaLong(\(expr))" : expr)

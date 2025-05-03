@@ -31,12 +31,15 @@ class MethodGenerator {
 
     let modifiers = funcDecl.isStatic ? "static" : ""
 
+    let throwsClause = funcDecl.isThrowing ? " throws Exception" : ""
+
+
     return
 """
-  public \(modifiers) \(retType) \(name)(\(paramDecls.joined(separator: ", "))) {
+  public \(modifiers) \(retType) \(name)(\(paramDecls.joined(separator: ", "))) \(throwsClause) {
     \(call);
   }
-  private \(modifiers) native \(retType) \(name)Impl(\(paramDeclsImpl.joined(separator: ", ")));
+  private \(modifiers) native \(retType) \(name)Impl(\(paramDeclsImpl.joined(separator: ", "))) \(throwsClause);
 """
   }
 }

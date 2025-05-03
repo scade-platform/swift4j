@@ -35,6 +35,10 @@ extension TypeSyntax {
     try map().jniType(primitivesAsObjects: primitivesAsObjects)
   }
 
+  func jniTypeDefaultValue(primitivesAsObjects: Bool = false) throws -> String {
+    try map().jniTypeDefaultValue(primitivesAsObjects: primitivesAsObjects)
+  }
+
   func toJava(_ expr: String, primitivesAsObjects: Bool = false) throws -> MappingRetType {
     try map().toJava(expr, primitivesAsObjects: primitivesAsObjects)
   }
@@ -48,6 +52,7 @@ extension TypeSyntax {
 protocol JvmMappedTypeSyntax: SyntaxProtocol {
   func jniSignature(primitivesAsObjects: Bool) throws -> String
   func jniType(primitivesAsObjects: Bool) throws -> String
+  func jniTypeDefaultValue(primitivesAsObjects: Bool) throws -> String
 
   func toJava(_: String, primitivesAsObjects: Bool) throws -> MappingRetType
   func fromJava(_: String, primitivesAsObjects: Bool) throws -> MappingRetType

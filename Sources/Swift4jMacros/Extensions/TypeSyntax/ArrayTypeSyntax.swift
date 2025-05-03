@@ -13,6 +13,8 @@ extension ArrayTypeSyntax: JvmMappedTypeSyntax {
 
   func jniType(primitivesAsObjects: Bool) -> String { "JavaObject?" }
 
+  func jniTypeDefaultValue(primitivesAsObjects: Bool) throws -> String { "[]" }
+
   func toJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
     return MappingRetType(mapped: "\(expr).toJavaObject()")
   }

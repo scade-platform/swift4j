@@ -39,6 +39,8 @@ extension FunctionTypeSyntax: JvmMappedTypeSyntax {
 
   func jniType(primitivesAsObjects: Bool) -> String { "JavaObject?" }
 
+  func jniTypeDefaultValue(primitivesAsObjects: Bool) throws -> String { "nil" }
+
   func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType { MappingRetType(mapped: "nil") }
 
   func fromJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
