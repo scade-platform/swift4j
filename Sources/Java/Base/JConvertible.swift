@@ -128,7 +128,7 @@ extension JObjectConvertible {
 }
 
 
-public protocol JInterfaceProxy where Self: Object {
+public protocol JInterfaceProxy: ObjectBase {
   //TODO: temporarly removed because of bugs in Swift 4.2. with "where Self: SomeClass" constraints
   associatedtype Proto//: JObjectConvertible
 }

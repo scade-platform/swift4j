@@ -8,7 +8,7 @@ let package = Package(
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .watchOS(.v6), .visionOS(.v1)],
     
     products: [
-        .library(name: "Java", type: .static, targets: ["Java"]),
+        .library(name: "Java", targets: ["Java"]),
         .library(name: "Swift4j", targets: ["Swift4j"]),
 
         .executable(name: "swift4j-cli", targets: ["swift4j-cli"]),

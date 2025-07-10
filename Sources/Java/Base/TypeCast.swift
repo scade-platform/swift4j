@@ -6,7 +6,7 @@
 //
 
 
-public func cast<T: JInterfaceProxy>(_ obj: Object?, to: T.Type) -> T.Proto? {
+public func cast<T: JInterfaceProxy>(_ obj: ObjectBase?, to: T.Type) -> T.Proto? {
   guard let _obj = obj else { return nil}
   
   guard let proto = _obj as? T.Proto else  {
@@ -17,6 +17,6 @@ public func cast<T: JInterfaceProxy>(_ obj: Object?, to: T.Type) -> T.Proto? {
 }
 
 
-public func cast<T: JInterfaceProxy>(_ objs: [Object?], to type: T.Type) -> [T.Proto?] {
+public func cast<T: JInterfaceProxy>(_ objs: [ObjectBase?], to type: T.Type) -> [T.Proto?] {
   return objs.map{cast($0, to: type)}
 }

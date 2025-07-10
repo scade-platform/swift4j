@@ -42,7 +42,7 @@ public final class JObjectRef<T: JObjectConvertible & AnyObject>: @unchecked Sen
     }
   }
 
-  private func withLock<R>(_ body: @Sendable (inout JObject?) -> R) -> R {
+  private func withLock<R>(_ body: (inout JObject?) -> R) -> R {
     pthread_mutex_lock(&self.mutex); defer { pthread_mutex_unlock(&self.mutex) }
     return body(&jobj)
   }
