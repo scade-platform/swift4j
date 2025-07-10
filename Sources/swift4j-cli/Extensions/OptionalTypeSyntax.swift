@@ -1,7 +1,5 @@
 import SwiftSyntax
-import SwiftSyntaxBuilder
-import SwiftSyntaxMacros
-import SwiftDiagnostics
+import SwiftParser
 
 import SwiftSyntaxExtensions
 
