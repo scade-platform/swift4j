@@ -3,6 +3,8 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftDiagnostics
 
+import SwiftSyntaxExtensions
+
 public enum JvmMacrosError: Swift.Error, CustomStringConvertible {
   case message(String, Optional<SyntaxProtocol> = nil)
 
@@ -24,6 +26,11 @@ struct JvmMacrosWarnDiagnostic: DiagnosticMessage {
 }
 
 extension MacroExpansionContext {
+
+  var enclosingDeclType: (any JvmTypeDeclSyntax)? {
+    lexicalContext.first?.asProtocol(DeclSyntaxProtocol.self) as? (any JvmTypeDeclSyntax)
+  }
+
   func executeAndWarnIfFails<T>(at node: some SyntaxProtocol, _ f: () throws -> T) -> T? {
     do {
       return try f()

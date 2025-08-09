@@ -5,9 +5,9 @@ import SwiftSyntaxExtensions
 
 
 protocol JvmTypeDeclSyntax: TypeDeclSyntax {
-  var shouldExpandMemberDecls: Bool { get }
   var selfExpr: String { get }
-  
+  var shouldExpandMemberDecls: Bool { get }
+
   func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String
   func expandCtorDecls(in context: some MacroExpansionContext) throws -> String
 
@@ -17,9 +17,11 @@ protocol JvmTypeDeclSyntax: TypeDeclSyntax {
 
 
 extension JvmTypeDeclSyntax {
+  var selfExpr: String { "_self(ptr)" }
+
   var shouldExpandMemberDecls: Bool { true }
 
-  var selfExpr: String { "_self(ptr)" }
+  // Expand JVM class init function
 
   func expandPeer(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
     guard shouldExpandMemberDecls else { return [] }
@@ -38,6 +40,8 @@ func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClas
 """
     return ["\(raw: decl)"]
   }
+  
+  // Expand members
 
   func expandMembers(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
     let syntax =
@@ -46,8 +50,9 @@ func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClas
 \(try expandJavaObjectDecls(in: context))
 \(try expandCtorDecls(in: context))
 \(expandFuncDecls(in: context))
-\(expandVarDecls(in: context))
 """
+    
+//\(expandVarDecls(in: context))
 
     return ["\(raw: syntax)"]
   }
@@ -120,7 +125,7 @@ extension JvmTypeDeclSyntax {
     let fqn = parents.isEmpty ? typeName : parents.map{$0.typeName}.joined(separator: ".") + "." + typeName
 
     let varNatives: [String] = exportedDecls.varDecls.flatMap { decl in
-      guard let bridgings = try? decl.bridgings else { return [String]() }
+      guard let bridgings = try? decl.bridgings(typeDecl: self) else { return [String]() }
       return bridgings.map { expandCreateNativeMethod(name: $0.javaName, sig: $0.sig, fn: "\(fqn).\($0.bridgeName)") }
     }
 

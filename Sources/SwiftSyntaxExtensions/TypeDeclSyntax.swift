@@ -23,7 +23,7 @@ public extension TypeDeclSyntax {
 
   var isExported: Bool { !exportAttributes.isEmpty }
 
-  var exportAttributes: AttributeListSyntax {    
+  var exportAttributes: AttributeListSyntax {
     let attrs = findAttributes(name: "jvm")
     return AttributeListSyntax(attrs)
   }

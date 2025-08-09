@@ -9,6 +9,7 @@ class VarGenerator {
 
   private let varDecl: VariableDeclSyntax
   private let className: String
+  private let observationTracking: Bool
 
   private var modifiers: String {
     varDecl.isStatic ? "static" : ""
@@ -18,9 +19,10 @@ class VarGenerator {
     varDecl.isStatic ? className : "this"
   }
 
-  init(_ varDecl: VariableDeclSyntax, className: String) {
+  init(_ varDecl: VariableDeclSyntax, className: String, observationTracking: Bool = false) {
     self.varDecl = varDecl
     self.className = className
+    self.observationTracking = observationTracking
   }
 
   func generate(with ctx: inout Context) -> String {
@@ -28,6 +30,7 @@ class VarGenerator {
 """
 \(generateGetter(from: $0, with: &ctx))
 \(varDecl.isReadonly ? "" : generateSetter(from: $0, with: &ctx))
+\(varDecl.isObservable && observationTracking ? generateGetterWithObservationTracking(from: $0, with: &ctx) : "")
 """
     }.joined(separator: "\n")
   }
@@ -79,6 +82,19 @@ class VarGenerator {
     \(callee).\(name)Impl(\(implParam));
   }
   private \(modifiers) native void \(name)Impl(\(implParamDecl));
+"""
+  }
+
+  private func generateGetterWithObservationTracking(from decl: VariableDeclSyntax.VarDecl, with ctx: inout Context) -> String {
+    let name = "get\(decl.name.capitalized)WithObservationTracking"
+    let retType = decl.type.map(with: &ctx)
+
+    return
+"""
+  public \(retType) \(name)(java.lang.Runnable onChange) {
+    return \(callee).\(name)Impl(_ptr, onChange);
+  }
+  private native \(retType) \(name)Impl(long ptr, java.lang.Runnable onChange);
 """
   }
 }

@@ -10,7 +10,8 @@ public enum Platform: Equatable {
 @attached(extension,
           conformances: JObjectConvertible,
           names: named(toJavaObject), named(fromJavaObject))
-@attached(peer, names: suffixed(_class_init))
+@attached(peer,
+          names: suffixed(_class_init))
 @attached(member,
           names: 
             named(jobj),
@@ -18,8 +19,15 @@ public enum Platform: Equatable {
             named(deinit_jni_t),
             named(deinit_jni),
             arbitrary)
+@attached(memberAttribute)
 public macro jvm() =
   #externalMacro(module: "Swift4jMacros", type: "JvmMacro")
+
+
+@attached(peer,
+          names: arbitrary)
+public macro jvm_exported() =
+  #externalMacro(module: "Swift4jMacros", type: "JvmExportedMacro")
 
 /*
 public macro jvm(_ platforms: Platform...,

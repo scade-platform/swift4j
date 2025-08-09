@@ -7,6 +7,7 @@ import SwiftCompilerPlugin
 struct SwiftJavaPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         JvmMacro.self,
+        JvmExportedMacro.self,
         NonjvmMacro.self
     ]
 }

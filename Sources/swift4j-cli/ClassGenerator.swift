@@ -14,7 +14,7 @@ class ClassGenerator<T: TypeDeclSyntax>: TypeGenerator<T> {
 
   override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
     if node.isExported && node.parentDecl?.isExported ?? true {
-      varGens.append(VarGenerator(node, className: name))
+      varGens.append(VarGenerator(node, className: name, observationTracking: typeDecl.isObservable))
     }
     return .skipChildren
   }

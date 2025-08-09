@@ -15,28 +15,34 @@ extension VariableDeclSyntax {
     ["_", "_"] + (isStatic ? [] : ["ptr"])
   }
 
-  var bridgings: [(javaName: String, bridgeName: String, sig: String)] {
-    get throws {
-      let _self = isStatic ? "" : "J"
+  func bridgings(typeDecl: any JvmTypeDeclSyntax) throws -> [(javaName: String, bridgeName: String, sig: String)] {
+    let _self = isStatic ? "" : "J"
 
-      return try decls.flatMap {
-        let jniType = try $0.type.jniSignature()
-        var decls = [(
-          javaName: "get\($0.name.capitalized)Impl",
-          bridgeName: "\($0.name)_get_jni",
-          sig: "(\(_self))\(jniType)"
-        )]
+    return try decls.flatMap {
+      let jniType = try $0.type.jniSignature()
+      var decls = [(
+        javaName: "get\($0.name.capitalized)Impl",
+        bridgeName: "\($0.name)_get_jni",
+        sig: "(\(_self))\(jniType)"
+      )]
 
-        if !isReadonly {
-          decls.append((
-            javaName: "set\($0.name.capitalized)Impl",
-            bridgeName: "\($0.name)_set_jni",
-            sig: "(\(_self)\(jniType))V"
-          ))
-        }
-
-        return decls
+      if !isReadonly {
+        decls.append((
+          javaName: "set\($0.name.capitalized)Impl",
+          bridgeName: "\($0.name)_set_jni",
+          sig: "(\(_self)\(jniType))V"
+        ))
       }
+
+      if isObservable && typeDecl.isObservable {
+        decls.append((
+            javaName: "get\($0.name.capitalized)WithObservationTrackingImpl",
+            bridgeName: "\($0.name)_get_with_observation_tracking_jni",
+            sig: "(\(_self)Ljava/lang/Runnable;)\(jniType)"
+          ))
+      }
+
+      return decls
     }
   }
 
@@ -48,6 +54,7 @@ extension VariableDeclSyntax {
     return try decls.flatMap {
       [try makeBridgingGetter(for: $0, selfExpr: _self)]
         + (isReadonly ? [] : [try makeBridgingSetter(for: $0, selfExpr: _self)])
+        + (isObservable && typeDecl.isObservable ? [try makeBridgingGetterWithObservationTracking(for: $0, selfExpr: _self)] : [])
     }.joined(separator: "\n")
   }
 
@@ -84,6 +91,29 @@ fileprivate typealias \(bridgeName)_t = @convention(c)(\(paramTypes.joined(separ
 fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in    
   \(mapping.stmts.joined(separator: "\n  "))
   return \(mapping.mapped)
+}
+"""
+  }
+
+  private func makeBridgingGetterWithObservationTracking(for varDecl: VarDecl, selfExpr: String) throws -> String {
+    let bridgeName = "\(varDecl.name)_get_with_observation_tracking_jni"
+    let paramTypes = defaultParamTypes + ["JavaObject"]
+    let returnType = try varDecl.type.jniType()
+    let closureParams = defaultClosureParams + ["onChange"]
+
+    let mapping = try varDecl.type.toJava("\(selfExpr).\(varDecl.name)")
+
+    return
+"""
+fileprivate typealias \(bridgeName)_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
+fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in    
+  let _onChange = JObject(onChange) 
+  return withObservationTracking {
+    \(mapping.stmts.joined(separator: "\n  "))
+    return \(mapping.mapped)
+  } onChange: {
+    _onChange.call(method: "run")
+  }
 }
 """
   }

@@ -9,7 +9,6 @@ import SwiftSyntaxExtensions
 
 
 public struct JvmMacro {
-  
   static func typeDecl(from decl: some DeclSyntaxProtocol) throws -> any JvmTypeDeclSyntax {
     if let classDecl = decl.as(ClassDeclSyntax.self) {
       return classDecl
@@ -26,7 +25,7 @@ public struct JvmMacro {
   }
 
   static func assert(context: some MacroExpansionContext) throws {
-    if let enclosingDeclType = context.lexicalContext.first?.asProtocol(DeclSyntaxProtocol.self) as? (any TypeDeclSyntax) {
+    if let enclosingDeclType = context.enclosingDeclType {
       if !enclosingDeclType.isExported {
         throw JvmMacrosError.message(
           "Enclosing type '\(enclosingDeclType.typeName)' is not exported. Add the @jvm attribute to the parent."
@@ -75,6 +74,24 @@ extension JvmMacro: MemberMacro {
     return try typeDecl(from: declaration).expandMembers(in: context)
   }
 }
+
+
+// MARK: - + MemberAttributeMacro
+
+extension JvmMacro: MemberAttributeMacro {
+  public static func expansion(of node: SwiftSyntax.AttributeSyntax,
+                               attachedTo declaration: some SwiftSyntax.DeclGroupSyntax,
+                               providingAttributesFor member: some SwiftSyntax.DeclSyntaxProtocol,
+                               in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.AttributeSyntax] {
+
+    if let decl = member.as(VariableDeclSyntax.self), decl.isExported {
+      return [AttributeSyntax(stringLiteral: "@jvm_exported")]
+    }
+
+    return []
+  }
+}
+
 
 // MARK: - + PeerMacro
 
