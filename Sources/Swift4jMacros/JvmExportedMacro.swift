@@ -8,10 +8,7 @@ import SwiftDiagnostics
 import SwiftSyntaxExtensions
 
 
-public struct JvmExportedMacro {
-
-}
-
+public struct JvmExportedMacro { }
 
 
 // MARK: - + MemberMacro

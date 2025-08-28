@@ -23,8 +23,10 @@ public extension TypeDeclSyntax {
 
   var isExported: Bool { !exportAttributes.isEmpty }
 
+  var isMainActorIsolated: Bool? { hasAttribute("MainActor") }
+
   var exportAttributes: AttributeListSyntax {
-    let attrs = findAttributes(name: "jvm")
+    let attrs = findAttributes("jvm")
     return AttributeListSyntax(attrs)
   }
 

@@ -47,18 +47,18 @@ extension VariableDeclSyntax {
   }
 
   func makeBridgingDecls(typeDecl: any JvmTypeDeclSyntax) throws -> String {
-    let _self = isStatic
-      ? "\(typeDecl.typeName).self"
-      : typeDecl.selfExpr
-
-    return try decls.flatMap {
-      [try makeBridgingGetter(for: $0, selfExpr: _self)]
-        + (isReadonly ? [] : [try makeBridgingSetter(for: $0, selfExpr: _self)])
-        + (isObservable && typeDecl.isObservable ? [try makeBridgingGetterWithObservationTracking(for: $0, selfExpr: _self)] : [])
+    try decls.flatMap {
+      [try makeBridgingGetter(for: $0, in: typeDecl)]
+        + (isReadonly ? [] : [try makeBridgingSetter(for: $0, in: typeDecl)])
+        + (isObservable && typeDecl.isObservable ? [try makeBridgingGetterWithObservationTracking(for: $0, in: typeDecl)] : [])
     }.joined(separator: "\n")
   }
 
-  private func makeBridgingSetter(for varDecl: VarDecl, selfExpr: String) throws -> String {
+  //MARK: - Setter
+
+  private func makeBridgingSetter(for varDecl: VarDecl, in typeDecl: any JvmTypeDeclSyntax) throws -> String {
+    let _self = isStatic ? "\(typeDecl.typeName).self" : typeDecl.selfExpr
+
     let bridgeName = "\(varDecl.name)_set_jni"
     let paramTypes = defaultParamTypes + [try varDecl.type.jniType()]
     let returnType = "Void"
@@ -66,55 +66,91 @@ extension VariableDeclSyntax {
     let closureParams = defaultClosureParams + [varParamName]
     
     let mapping = try varDecl.type.fromJava(varParamName)
+    let body =
+"""
+\(mapping.stmts.joined(separator: "\n  "))
+\(_self).\(varDecl.name) = \(mapping.mapped)
+"""
 
-    return
-"""
-fileprivate typealias \(bridgeName)_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
-fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in  
-  \(mapping.stmts.joined(separator: "\n  "))
-  \(selfExpr).\(varDecl.name) = \(mapping.mapped)
-}
-"""
+    return makeDecl(bridgeName,
+                    in: typeDecl,
+                    paramTypes: paramTypes,
+                    returnType: returnType,
+                    closureParams: closureParams,
+                    body: body,
+                    isReturning: false)
   }
 
-  private func makeBridgingGetter(for varDecl: VarDecl, selfExpr: String) throws -> String {
+  //MARK: - Getter
+
+  private func makeBridgingGetter(for varDecl: VarDecl, in typeDecl: any JvmTypeDeclSyntax) throws -> String {
+    let _self = isStatic ? "\(typeDecl.typeName).self" : typeDecl.selfExpr
+
     let bridgeName = "\(varDecl.name)_get_jni"
     let paramTypes = defaultParamTypes
     let returnType = try varDecl.type.jniType()
     let closureParams = defaultClosureParams
     
-    let mapping = try varDecl.type.toJava("\(selfExpr).\(varDecl.name)")
+    let mapping = try varDecl.type.toJava("\(_self).\(varDecl.name)")
+    let body =
+"""
+\(mapping.stmts.joined(separator: "\n  "))
+return \(mapping.mapped)
+"""
 
-    return
-"""
-fileprivate typealias \(bridgeName)_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
-fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in    
-  \(mapping.stmts.joined(separator: "\n  "))
-  return \(mapping.mapped)
-}
-"""
+    return makeDecl(bridgeName,
+                    in: typeDecl,
+                    paramTypes: paramTypes,
+                    returnType: returnType,
+                    closureParams: closureParams,
+                    body: body,
+                    isReturning: true)
   }
 
-  private func makeBridgingGetterWithObservationTracking(for varDecl: VarDecl, selfExpr: String) throws -> String {
+  //MARK: - Getter + Observation
+
+  private func makeBridgingGetterWithObservationTracking(for varDecl: VarDecl, in typeDecl: any JvmTypeDeclSyntax) throws -> String {
+    let _self = isStatic ? "\(typeDecl.typeName).self" : typeDecl.selfExpr
+
     let bridgeName = "\(varDecl.name)_get_with_observation_tracking_jni"
     let paramTypes = defaultParamTypes + ["JavaObject"]
     let returnType = try varDecl.type.jniType()
     let closureParams = defaultClosureParams + ["onChange"]
 
-    let mapping = try varDecl.type.toJava("\(selfExpr).\(varDecl.name)")
+    let mapping = try varDecl.type.toJava("\(_self).\(varDecl.name)")
+    let body =
+"""
+let _onChange = JObject(onChange) 
+return withObservationTracking {
+  \(mapping.stmts.joined(separator: "\n  "))
+  return \(mapping.mapped)
+} onChange: {
+  _onChange.call(method: "run")
+}
+"""
 
-    return
+    return makeDecl(bridgeName,
+                    in: typeDecl,
+                    paramTypes: paramTypes,
+                    returnType: returnType,
+                    closureParams: closureParams,
+                    body: body,
+                    isReturning: true)
+  }
+
+  private func makeDecl(_ bridgeName: String,
+                        in typeDecl: any JvmTypeDeclSyntax,
+                        paramTypes: [String],
+                        returnType: String,
+                        closureParams: [String],
+                        body: String,
+                        isReturning: Bool) -> String {
 """
 fileprivate typealias \(bridgeName)_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
 fileprivate static let \(bridgeName): \(bridgeName)_t = {\(closureParams.joined(separator: ", ")) in    
-  let _onChange = JObject(onChange) 
-  return withObservationTracking {
-    \(mapping.stmts.joined(separator: "\n  "))
-    return \(mapping.mapped)
-  } onChange: {
-    _onChange.call(method: "run")
-  }
+  \(wrapBody(body, in: typeDecl))  
 }
 """
   }
+
 }

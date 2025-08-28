@@ -1,13 +1,11 @@
 import SwiftSyntax
 
 
-extension FunctionDeclSyntax: ExportableDeclSyntax {
-  public var isStatic: Bool {
-    modifiers.contains {
-      $0.name.text == "static"
-    }
+extension FunctionDeclSyntax: MemberDeclSyntax {
+  public var isVoid: Bool {
+    signature.returnClause == nil
   }
-
+  
   public var isAsync: Bool {
     signature.effectSpecifiers?.asyncSpecifier != nil
   }

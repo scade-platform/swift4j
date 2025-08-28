@@ -38,7 +38,7 @@ extension FunctionDeclSyntax {
 """
 fileprivate typealias \(name)_jni_t = @convention(c)(\(paramTypes.joined(separator: ", "))) -> \(returnType)
 fileprivate static let \(name)_jni: \(name)_jni_t = {\(closureParams.joined(separator: ", ")) in
-\(try makeBridgingFunctionBody(selfExpr: _self))
+  \(wrapBody(try makeBridgingFunctionBody(selfExpr: _self), in: typeDecl))
 }
 """
   }
@@ -95,7 +95,6 @@ fileprivate static let \(name)_jni: \(name)_jni_t = {\(closureParams.joined(sepa
   }
 """
     }
-
 
     let body =
 """

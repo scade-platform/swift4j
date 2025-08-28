@@ -1,7 +1,7 @@
 import SwiftSyntax
 
 
-extension VariableDeclSyntax: ExportableDeclSyntax {
+extension VariableDeclSyntax: MemberDeclSyntax {
   public struct VarDecl {
     public let name: String
     public let type: TypeSyntax
@@ -22,13 +22,21 @@ extension VariableDeclSyntax: ExportableDeclSyntax {
     }
   }
 
-  public var isStatic: Bool {
-    modifiers.contains {
-      $0.name.text == "static"
-    }
+  public var isVoid: Bool {
+    isReadonly
   }
 
-  public var isReadonly: Bool {    
+  public var isReadonly: Bool {
     return bindingSpecifier.tokenKind == .keyword(.let)
+  }
+
+  public var isAsync: Bool {
+    ///TODO: implement for computed properties
+    return false
+  }
+
+  public var isThrowing: Bool {
+    ///TODO: implement for computed properties
+    return false
   }
 }

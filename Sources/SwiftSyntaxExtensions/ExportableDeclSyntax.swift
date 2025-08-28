@@ -4,6 +4,10 @@ import SwiftSyntax
 public protocol ExportableDeclSyntax: DeclSyntaxProtocol {
   var attributes: AttributeListSyntax { get }
   var modifiers: DeclModifierListSyntax { get }
+
+  // Optional to represent 'unknown' for members where isolation is implied by the isolation on the class level
+  // when the member is not explicitely marked as nonisolated
+  var isMainActorIsolated: Bool? { get }
 }
 
 public enum Visibility: String {
@@ -28,7 +32,7 @@ extension ExportableDeclSyntax {
     case .private:
       return false
     default:
-      return findAttributes(name: "nonjvm").isEmpty
+      return !hasAttribute("nonjvm")
     }
   }
 
@@ -37,8 +41,12 @@ extension ExportableDeclSyntax {
     return parent as? any TypeDeclSyntax
   }
 
-  public func findAttributes(name: String) -> [AttributeListSyntax.Element] {
+  public func findAttributes(_ name: String) -> [AttributeListSyntax.Element] {
     return attributes.findAttributes{$0.attributeName.as(IdentifierTypeSyntax.self)?.name.text == name}
+  }
+
+  public func hasAttribute(_ name: String) -> Bool {
+    return !findAttributes(name).isEmpty
   }
 }
 
