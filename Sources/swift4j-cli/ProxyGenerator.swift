@@ -7,6 +7,7 @@ import SwiftSyntaxExtensions
 
 class ProxyGenerator: SyntaxVisitor {
   struct Context {
+    var package: String
     var imports: Set<String> = []
   }
   
@@ -58,7 +59,7 @@ class ProxyGenerator: SyntaxVisitor {
   }
 
   func generate(_ typeGen: TypeGeneratorProtocol) -> String {
-    var ctx = Context()
+    var ctx = Context(package: package)
 
     let typeDecl = typeGen.generate(with: &ctx)
 
