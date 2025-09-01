@@ -1,11 +1,7 @@
 import SwiftSyntax
 
 
-extension FunctionDeclSyntax: MemberDeclSyntax {
-  public var isVoid: Bool {
-    signature.returnClause == nil
-  }
-  
+extension FunctionDeclSyntax: MemberDeclSyntax {  
   public var isAsync: Bool {
     signature.effectSpecifiers?.asyncSpecifier != nil
   }

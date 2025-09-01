@@ -41,12 +41,8 @@ extension ExportableDeclSyntax {
     return parent as? any TypeDeclSyntax
   }
 
-  public func findAttributes(_ name: String) -> [AttributeListSyntax.Element] {
-    return attributes.findAttributes{$0.attributeName.as(IdentifierTypeSyntax.self)?.name.text == name}
-  }
-
   public func hasAttribute(_ name: String) -> Bool {
-    return !findAttributes(name).isEmpty
+    return !attributes.findAttributes(name).isEmpty
   }
 }
 

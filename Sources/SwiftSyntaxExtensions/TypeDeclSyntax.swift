@@ -26,7 +26,7 @@ public extension TypeDeclSyntax {
   var isMainActorIsolated: Bool? { hasAttribute("MainActor") }
 
   var exportAttributes: AttributeListSyntax {
-    let attrs = findAttributes("jvm")
+    let attrs = attributes.findAttributes("jvm")
     return AttributeListSyntax(attrs)
   }
 

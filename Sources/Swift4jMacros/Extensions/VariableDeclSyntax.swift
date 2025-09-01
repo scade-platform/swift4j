@@ -26,7 +26,7 @@ extension VariableDeclSyntax {
         sig: "(\(_self))\(jniType)"
       )]
 
-      if !isReadonly {
+      if !$0.readonly {
         decls.append((
           javaName: "set\($0.name.capitalized)Impl",
           bridgeName: "\($0.name)_set_jni",
@@ -49,7 +49,7 @@ extension VariableDeclSyntax {
   func makeBridgingDecls(typeDecl: any JvmTypeDeclSyntax) throws -> String {
     try decls.flatMap {
       [try makeBridgingGetter(for: $0, in: typeDecl)]
-        + (isReadonly ? [] : [try makeBridgingSetter(for: $0, in: typeDecl)])
+      + ($0.readonly ? [] : [try makeBridgingSetter(for: $0, in: typeDecl)])
         + (isObservable && typeDecl.isObservable ? [try makeBridgingGetterWithObservationTracking(for: $0, in: typeDecl)] : [])
     }.joined(separator: "\n")
   }

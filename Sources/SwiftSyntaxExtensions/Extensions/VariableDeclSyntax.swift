@@ -6,6 +6,7 @@ extension VariableDeclSyntax: MemberDeclSyntax {
     public let name: String
     public let type: TypeSyntax
     public let initialized: Bool
+    public let readonly: Bool
   }
 
   public var decls: [VarDecl] {
@@ -18,16 +19,11 @@ extension VariableDeclSyntax: MemberDeclSyntax {
         return nil
       }
 
-      return VarDecl(name: name, type: type, initialized: $0.initializer != nil)
+      return VarDecl(name: name,
+                     type: type,
+                     initialized: $0.initializer != nil || $0.accessorBlock != nil,
+                     readonly: bindingSpecifier.tokenKind == .keyword(.let) || !($0.accessorBlock?.hasSetter ?? true))
     }
-  }
-
-  public var isVoid: Bool {
-    isReadonly
-  }
-
-  public var isReadonly: Bool {
-    return bindingSpecifier.tokenKind == .keyword(.let)
   }
 
   public var isAsync: Bool {
@@ -38,5 +34,17 @@ extension VariableDeclSyntax: MemberDeclSyntax {
   public var isThrowing: Bool {
     ///TODO: implement for computed properties
     return false
+  }
+}
+
+
+fileprivate extension AccessorBlockSyntax {
+  var hasSetter: Bool {
+    guard case .accessors(let accessorDecls) = self.accessors else {
+      return false
+    }
+
+    return accessorDecls.contains{ $0.attributes.hasAttribute("set") }
+
   }
 }

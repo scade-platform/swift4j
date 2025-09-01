@@ -22,4 +22,12 @@ extension AttributeListSyntax {
     }
     return self.compactMap(attrMap)
   }
+
+  func findAttributes(_ name: String) -> [AttributeListSyntax.Element] {
+    return findAttributes{$0.attributeName.as(IdentifierTypeSyntax.self)?.name.text == name}
+  }
+
+  func hasAttribute(_ name: String) -> Bool {
+    return !findAttributes(name).isEmpty
+  }
 }

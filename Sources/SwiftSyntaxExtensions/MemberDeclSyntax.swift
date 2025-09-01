@@ -1,8 +1,7 @@
 import SwiftSyntax
 
 
-public protocol MemberDeclSyntax: ExportableDeclSyntax {
-  var isVoid: Bool { get }
+public protocol MemberDeclSyntax: ExportableDeclSyntax {  
   var isStatic: Bool { get }
   var isAsync: Bool { get }
   var isThrowing: Bool { get }
