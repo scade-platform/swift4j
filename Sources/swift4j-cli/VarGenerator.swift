@@ -29,7 +29,7 @@ class VarGenerator {
     return varDecl.decls.map {
 """
 \(generateGetter(from: $0, with: &ctx))
-\(varDecl.isReadonly ? "" : generateSetter(from: $0, with: &ctx))
+\($0.readonly ? "" : generateSetter(from: $0, with: &ctx))
 \(varDecl.isObservable && observationTracking ? generateGetterWithObservationTracking(from: $0, with: &ctx) : "")
 """
     }.joined(separator: "\n")

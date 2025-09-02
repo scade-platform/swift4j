@@ -15,6 +15,10 @@ struct Swift4jCommand: ParsableCommand {
           help: "Java version")
   var javaVersion: Int = 11
 
+  @Option(name: .long,
+          help: "Generate Android ViewModels for Swift Observables"  )
+  var generateAndroidViewModels: Bool = false
+
   @Argument(help: "Input filenames.")
   var paths: [String] = []
   
@@ -57,8 +61,10 @@ struct Swift4jCommand: ParsableCommand {
         try write(res.content, to: "\(res.classname).java")
       }
 
-      for res in try viewModelGenerator.run(path: p) {
-        try write(res.content, to: "viewmodel/\(res.classname).kt")
+      if generateAndroidViewModels {
+        for res in try viewModelGenerator.run(path: p) {
+          try write(res.content, to: "viewmodel/\(res.classname).kt")
+        }
       }
     }
 
