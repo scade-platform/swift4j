@@ -22,7 +22,7 @@ class CtorGenerator {
     return
 """
   public \(className)(\(paramDecls)) {
-    this(\(className).init\(index)(\(callParams)));
+    this(new SwiftPtr(\(className).init\(index)(\(callParams))));
   }
   private static native long init\(index)(\(paramDecls));
 """

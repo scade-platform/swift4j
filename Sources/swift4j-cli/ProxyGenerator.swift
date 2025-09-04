@@ -73,6 +73,8 @@ class ProxyGenerator: SyntaxVisitor {
 """
 package \(self.package);
 
+import io.scade.swift4j.SwiftPtr; 
+
 \(imports.map{"import \($0);"}.joined(separator: "\n"))
 
 \(typeDecl)

@@ -21,7 +21,7 @@ class MethodGenerator {
     let params = funcDecl.signature.paramsMapping(with: &ctx)
     let retType = funcDecl.signature.returnClause?.type.map(with: &ctx) ?? "void"
 
-    let callParams = (funcDecl.isStatic ? [] : ["_ptr"]) + params.map{$0.name}
+    let callParams = (funcDecl.isStatic ? [] : ["_ptr()"]) + params.map{$0.name}
 
     var call = (funcDecl.isStatic ? className : "this") +  ".\(name)Impl(\(callParams.joined(separator: ", ")))"
     call = funcDecl.signature.returnClause != nil ? "return \(call)" : call

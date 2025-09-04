@@ -49,18 +49,20 @@ extension ClassGenerator: TypeGeneratorProtocol {
         \(name).deinit(_ptr);
       }
   }
-
-  private \(name)(long ptr) {
-     _ptr = ptr;
-     cleaner.register(this, new Deinit(_ptr));
+  
+  private static \(name) fromPtr(long ptr) {
+    var obj = new \(name)(new SwiftPtr(ptr));
+    cleaner.register(obj, new Deinit(ptr));
+    return obj;
   }
 """
 
     } else {
       std_ctor_dtor =
 """
-  private \(name)(long ptr) {
-     _ptr = ptr;
+  private static \(name) fromPtr(long ptr) {
+    var obj = \(name)(SwiftPtr(ptr));
+    return obj;
   }
 
   @Override
@@ -98,8 +100,16 @@ public \(nested ? "static" : "") class \(name) {
 
 \(class_init)
 
-  private final long _ptr;
+  private final SwiftPtr _ptr;
+    
+  private long _ptr() {
+    return _ptr.get();
+  }
 
+  private \(name)(SwiftPtr ptr) {
+     _ptr = ptr;
+  }
+  
 \(std_ctor_dtor)
 
   private static native void deinit(long ptr);

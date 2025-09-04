@@ -47,7 +47,7 @@ class VarGenerator {
       implParamDecl = ""
 
     } else {
-      implParam = "_ptr"
+      implParam = "_ptr()"
       implParamDecl = "long ptr"
     }
 
@@ -72,7 +72,7 @@ class VarGenerator {
       implParamDecl = "\(valType) value"
 
     } else {
-      implParam = "_ptr, value"
+      implParam = "_ptr(), value"
       implParamDecl = "long ptr, \(valType) value"
     }
 
@@ -92,7 +92,7 @@ class VarGenerator {
     return
 """
   public \(retType) \(name)(java.lang.Runnable onChange) {
-    return \(callee).\(name)Impl(_ptr, onChange);
+    return \(callee).\(name)Impl(_ptr(), onChange);
   }
   private native \(retType) \(name)Impl(long ptr, java.lang.Runnable onChange);
 """
