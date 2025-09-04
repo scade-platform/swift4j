@@ -26,7 +26,9 @@ extension JvmTypeDeclSyntax {
   func expandPeer(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
     guard shouldExpandMemberDecls else { return [] }
 
-    var fqnEscaped = typeName
+    let jniTypeName = typeName.replacingOccurrences(of: "_", with: "_1")
+
+    var fqnEscaped = jniTypeName
     if let moduleName = moduleName(from: context) {
       fqnEscaped = moduleName.replacingOccurrences(of: "_", with: "_1") + "_" + fqnEscaped
     }
@@ -34,7 +36,7 @@ extension JvmTypeDeclSyntax {
     let decl =
 """
 \( (isMainActorIsolated ?? false) ? "@MainActor" : "")
-@_cdecl("Java_\(fqnEscaped)_\(typeName)_1class_1init")
+@_cdecl("Java_\(fqnEscaped)_\(jniTypeName)_1class_1init")
 func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClass?) {    
   \(expandRegisterNatives(in: context))
 }
