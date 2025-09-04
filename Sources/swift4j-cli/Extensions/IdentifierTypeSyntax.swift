@@ -5,9 +5,14 @@ import SwiftSyntaxExtensions
 
 
 extension IdentifierTypeSyntax: MappableTypeSyntax {
+  ///TODO: add suport for more flexibel mapping using some sort of external definitions
   func map(with ctx: inout ProxyGenerator.Context, primitivesAsObjects: Bool) -> String {
     switch name.text {
     case "String": "String"
+    case "Date": {
+      ctx.imports.insert("java.util.Date")
+      return "Date"
+    }()
     case "Bool": primitivesAsObjects ? "Boolean" : "boolean"
     case "Int", "Int64": primitivesAsObjects ? "Long" : "long"
     case "Int32": primitivesAsObjects ? "Integer" : "int"
