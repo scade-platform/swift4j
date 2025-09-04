@@ -44,7 +44,7 @@ fileprivate extension AccessorBlockSyntax {
       return false
     }
 
-    return accessorDecls.contains{ $0.attributes.hasAttribute("set") }
+    return accessorDecls.contains{ $0.accessorSpecifier.tokenKind == .keyword(.set) }
 
   }
 }
