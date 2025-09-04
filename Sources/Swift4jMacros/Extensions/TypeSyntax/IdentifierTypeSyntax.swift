@@ -57,7 +57,14 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
 
   func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
     if isPrimitive && !primitivesAsObjects {
-      return MappingRetType(mapped: name.text == "Int" ? "JavaLong(\(expr))" : expr)
+      switch name.text {
+        case "Int":
+          return MappingRetType(mapped: "JavaLong(\(expr))")
+        case "Bool":
+          return MappingRetType(mapped: "JavaBoolean(\(expr) ? 1 : 0)")
+        default:
+          return MappingRetType(mapped: expr)
+      }
     } else {
       return MappingRetType(mapped: "\(expr).toJavaObject()")
     }
@@ -65,7 +72,15 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
 
   func fromJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
     if isPrimitive && !primitivesAsObjects {
-      return MappingRetType(mapped: name.text == "Int" ? "Int(\(expr))" : expr)
+      switch name.text {
+          case "Int":
+          return MappingRetType(mapped: "Int(\(expr))")
+        case "Bool":
+          return MappingRetType(mapped: "(\(expr) == 1)")
+        default:
+          return MappingRetType(mapped: expr)
+      }
+
     } else if isInOut {
       return MappingRetType(mapped: "&$0.pointee") {
 """
