@@ -49,6 +49,9 @@ let package = Package(
                 dependencies: [
                   "Java",
                   "Swift4jMacros"
+                ],
+                resources: [
+                  .process("java/io/scade/swift4j/SwiftPtr.java")
                 ]),
 
         .executableTarget(name: "swift4j-cli",
