@@ -348,15 +348,15 @@ extension Int64: JPrimitiveConvertible {
 // MARK: - Int
 
 extension Int: JPrimitiveConvertible {
-  #if arch(x86_64) || arch(arm64)
+#if arch(x86_64) || arch(arm64)
   public typealias PrimitiveType = JLong
   private typealias Convertible = Int64
   public static let javaSignature = "J"
-  #else
+#else
   public typealias PrimitiveType = JInteger
   private typealias Convertible = Int32
   public static let javaSignature = "I"
-  #endif
+#endif
   
   public static func fromJavaObject(_ obj: JavaObject) -> Int {
     return Int(Convertible.fromJavaObject(obj))
@@ -379,7 +379,12 @@ extension Int: JPrimitiveConvertible {
   }
   
   public static func fromStaticField(_ field: JavaFieldID, of cls: JavaClass) -> Int {
-    return Int(Convertible.fromStaticField(field, of: cls))
+#if arch(x86_64) || arch(arm64)
+    return Int(jni.GetStaticLongField(cls, field))
+#else
+    return Int(jni.GetStaticIntField(cls, field))
+#endif
+    //return Int(Convertible.fromStaticField(field, of: cls))
   }
   
   public func toStaticField(_ field: JavaFieldID, of cls: JavaClass) {
@@ -387,7 +392,7 @@ extension Int: JPrimitiveConvertible {
   }
   
   public func toJavaObject() -> JavaObject? {
-    return PrimitiveType(PrimitiveType.ConvertibleType(self)).javaObject.ptr
+    return Convertible(self).toJavaObject()
   }
   
   public func toJavaParameter() -> JavaParameter {

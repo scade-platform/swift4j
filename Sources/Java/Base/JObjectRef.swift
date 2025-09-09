@@ -34,7 +34,7 @@ public final class JObjectRef<T: JObjectConvertible & AnyObject>: @unchecked Sen
       //jobj = JObject(T.javaClass.create(unsafeBitCast(Unmanaged.passRetained(obj), to: JavaLong.self)), weak: true)
 
       let params = [unsafeBitCast(Unmanaged.passRetained(obj), to: JavaLong.self).toJavaParameter()]
-      jobj = JObject(T.javaClass.callStaticObjectMethod(method: "fromPtr", sig: "(J)\(T.javaSignature)", params)!)
+      jobj = JObject(T.javaClass.callStaticObjectMethod(method: "fromPtr", sig: "(J)\(T.javaSignature)", params)!, weak: true)
 
 
       return jobj!.ptr
