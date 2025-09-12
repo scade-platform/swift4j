@@ -6,6 +6,13 @@ import SwiftSyntaxExtensions
 
 extension ArrayTypeSyntax: MappableTypeSyntax {
   func map(with ctx: inout ProxyGenerator.Context, primitivesAsObjects: Bool) -> String {
-    return element.map(with: &ctx, primitivesAsObjects: primitivesAsObjects) + "[]"
+    let elementMap = element.map(with: &ctx, primitivesAsObjects: primitivesAsObjects)
+    switch ctx.settings.language {
+      case .java:
+        return elementMap + "[]"
+      case .kotlin:
+        return "Array<\(elementMap)>"
+    }
+
   }
 }

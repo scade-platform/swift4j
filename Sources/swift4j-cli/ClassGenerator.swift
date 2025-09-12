@@ -33,7 +33,7 @@ extension ClassGenerator: TypeGeneratorProtocol {
     let ctors = ctorGens.enumerated().map{$1.generate(with: &ctx, index: $0)}.joined(separator: "\n\n")
 
     let std_ctor_dtor: String
-    if settings.javaVersion >= 9 {
+    if case .java(let version) = settings.language, version >= 9 {
       std_ctor_dtor =
 """
   private static final Cleaner cleaner = Cleaner.create();
@@ -61,13 +61,12 @@ extension ClassGenerator: TypeGeneratorProtocol {
       std_ctor_dtor =
 """
   private static \(name) fromPtr(long ptr) {
-    var obj = \(name)(SwiftPtr(ptr));
-    return obj;
+    return new \(name)(new SwiftPtr(ptr));    
   }
 
   @Override
   public void finalize() {
-    \(name).deinit(_ptr);
+    \(name).deinit(_ptr.get());
   }
 """
     }

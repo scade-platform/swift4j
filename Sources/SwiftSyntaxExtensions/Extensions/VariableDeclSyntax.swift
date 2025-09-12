@@ -7,6 +7,11 @@ extension VariableDeclSyntax: MemberDeclSyntax {
     public let type: TypeSyntax
     public let initialized: Bool
     public let readonly: Bool
+    public let computed: Bool
+
+    public var capitalizedName: String {
+      name.first!.uppercased() + name.dropFirst()
+    }
   }
 
   public var decls: [VarDecl] {
@@ -19,10 +24,22 @@ extension VariableDeclSyntax: MemberDeclSyntax {
         return nil
       }
 
+      let hasComputedGet: Bool
+      let hasComputedSet: Bool
+
+      if let accessorBlock = $0.accessorBlock {
+        hasComputedGet = accessorBlock.hasGetter
+        hasComputedSet = accessorBlock.hasSetter
+      } else {
+        hasComputedGet = false
+        hasComputedSet = false
+      }
+
       return VarDecl(name: name,
                      type: type,
                      initialized: $0.initializer != nil || $0.accessorBlock != nil,
-                     readonly: bindingSpecifier.tokenKind == .keyword(.let) || !($0.accessorBlock?.hasSetter ?? true))
+                     readonly: bindingSpecifier.tokenKind == .keyword(.let) || (hasComputedGet && !hasComputedSet),
+                     computed: hasComputedGet)
     }
   }
 
@@ -45,6 +62,14 @@ fileprivate extension AccessorBlockSyntax {
     }
 
     return accessorDecls.contains{ $0.accessorSpecifier.tokenKind == .keyword(.set) }
+  }
 
+  var hasGetter: Bool {
+    switch accessors {
+      case .accessors(let accessorDecls):
+        return accessorDecls.contains{ $0.accessorSpecifier.tokenKind == .keyword(.get) }
+      case .getter:
+        return true
+    }
   }
 }

@@ -8,11 +8,17 @@ import SwiftSyntaxExtensions
 class ProxyGenerator: SyntaxVisitor {
   struct Context {
     var package: String
+    var settings: GeneratorSettings
     var imports: Set<String> = []
   }
   
   struct GeneratorSettings {
-    let javaVersion: Int
+    enum Language {
+      case java(version: Int)
+      case kotlin
+    }
+
+    let language: Language
   }
 
   private let package: String
@@ -22,7 +28,7 @@ class ProxyGenerator: SyntaxVisitor {
 
   init(package: String, javaVersion: Int) {
     self.package = package
-    self.settings = GeneratorSettings(javaVersion: javaVersion)
+    self.settings = GeneratorSettings(language: .java(version: javaVersion))
 
     super.init(viewMode: .fixedUp)
   }
@@ -59,14 +65,16 @@ class ProxyGenerator: SyntaxVisitor {
   }
 
   func generate(_ typeGen: TypeGeneratorProtocol) -> String {
-    var ctx = Context(package: package)
+    var ctx = Context(package: package, settings: settings)
 
     let typeDecl = typeGen.generate(with: &ctx)
 
     var imports = [String](ctx.imports)
 
-    if typeGen.isRefType && settings.javaVersion >= 9 {
-      imports.append("java.lang.ref.Cleaner")
+    if typeGen.isRefType {
+      if case .java(let version) = settings.language, version >= 9 {
+        imports.append("java.lang.ref.Cleaner")
+      }
     }
 
     return

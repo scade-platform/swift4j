@@ -30,13 +30,13 @@ class VarGenerator {
 """
 \(generateGetter(from: $0, with: &ctx))
 \($0.readonly ? "" : generateSetter(from: $0, with: &ctx))
-\(varDecl.isObservable && observationTracking ? generateGetterWithObservationTracking(from: $0, with: &ctx) : "")
+\($0.observable(varDecl) && observationTracking ? generateGetterWithObservationTracking(from: $0, with: &ctx) : "")
 """
     }.joined(separator: "\n")
   }
 
   private func generateGetter(from decl: VariableDeclSyntax.VarDecl, with ctx: inout Context) -> String {
-    let name = "get\(decl.name.capitalized)"
+    let name = "get\(decl.capitalizedName)"
     let retType = decl.type.map(with: &ctx)
 
     let implParam: String,
@@ -61,7 +61,7 @@ class VarGenerator {
   }
 
   private func generateSetter(from decl: VariableDeclSyntax.VarDecl, with ctx: inout Context) -> String {
-    let name = "set\(decl.name.capitalized)"
+    let name = "set\(decl.capitalizedName)"
     let valType = decl.type.map(with: &ctx)
 
     let implParam: String,
@@ -86,7 +86,7 @@ class VarGenerator {
   }
 
   private func generateGetterWithObservationTracking(from decl: VariableDeclSyntax.VarDecl, with ctx: inout Context) -> String {
-    let name = "get\(decl.name.capitalized)WithObservationTracking"
+    let name = "get\(decl.capitalizedName)WithObservationTracking"
     let retType = decl.type.map(with: &ctx)
 
     return

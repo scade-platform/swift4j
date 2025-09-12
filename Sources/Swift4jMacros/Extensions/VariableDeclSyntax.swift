@@ -21,22 +21,22 @@ extension VariableDeclSyntax {
     return try decls.flatMap {
       let jniType = try $0.type.jniSignature()
       var decls = [(
-        javaName: "get\($0.name.capitalized)Impl",
+        javaName: "get\($0.capitalizedName)Impl",
         bridgeName: "\($0.name)_get_jni",
         sig: "(\(_self))\(jniType)"
       )]
 
       if !$0.readonly {
         decls.append((
-          javaName: "set\($0.name.capitalized)Impl",
+          javaName: "set\($0.capitalizedName)Impl",
           bridgeName: "\($0.name)_set_jni",
           sig: "(\(_self)\(jniType))V"
         ))
       }
 
-      if isObservable && typeDecl.isObservable {
+      if $0.observable(self) && typeDecl.isObservable {
         decls.append((
-            javaName: "get\($0.name.capitalized)WithObservationTrackingImpl",
+            javaName: "get\($0.capitalizedName)WithObservationTrackingImpl",
             bridgeName: "\($0.name)_get_with_observation_tracking_jni",
             sig: "(\(_self)Ljava/lang/Runnable;)\(jniType)"
           ))
@@ -50,7 +50,7 @@ extension VariableDeclSyntax {
     try decls.flatMap {
       [try makeBridgingGetter(for: $0, in: typeDecl)]
       + ($0.readonly ? [] : [try makeBridgingSetter(for: $0, in: typeDecl)])
-        + (isObservable && typeDecl.isObservable ? [try makeBridgingGetterWithObservationTracking(for: $0, in: typeDecl)] : [])
+      + ($0.observable(self) && typeDecl.isObservable ? [try makeBridgingGetterWithObservationTracking(for: $0, in: typeDecl)] : [])
     }.joined(separator: "\n")
   }
 

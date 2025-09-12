@@ -15,8 +15,8 @@ struct Swift4jCommand: ParsableCommand {
           help: "Java version")
   var javaVersion: Int = 11
 
-  @Option(name: .long,
-          help: "Generate Android ViewModels for Swift Observables"  )
+  @Flag(name: .long,
+          help: "Generate Android ViewModels for Swift Observables",)
   var generateAndroidViewModels: Bool = false
 
   @Argument(help: "Input filenames.")

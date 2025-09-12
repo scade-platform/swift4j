@@ -34,7 +34,8 @@ class ViewModelsGenerator: SyntaxVisitor {
   }
 
   func generate(_ viewModelGen: ViewModelGenerator) -> String {
-    var ctx = ProxyGenerator.Context(package: package)
+    var ctx = ProxyGenerator.Context(package: package,
+                                     settings: .init(language: .kotlin))
 
     let viewModel = viewModelGen.generate(with: &ctx)
 
@@ -45,6 +46,7 @@ package \(self.package).viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -83,15 +85,26 @@ class ViewModelGenerator: SyntaxVisitor {
     return .skipChildren
   }
 
+  override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
+    return .skipChildren
+  }
+
   func generate(with ctx: inout ProxyGenerator.Context) -> String {
-    ctx.imports.insert("\(ctx.package).\(classDecl.typeName)")
+    //ctx.imports.insert("\(ctx.package).\(classDecl.typeName)")
+    ctx.imports.insert("\(ctx.package).*")
+
+    let decls = varDecls.flatMap { varDecl in
+      varDecl.decls
+        .filter{ $0.observable(varDecl) }
+        .map{ generate($0, with: &ctx)}
+    }
 
     return
 """
 class \(name)(
     private val model: \(classDecl.typeName)
 ) : ViewModel() {
-  \(varDecls.flatMap{$0.decls.map{decl in generate(decl, with: &ctx)}}.joined(separator: "/n"))
+  \(decls.joined(separator: "\n"))
 }
 
 class \(name)Factory(
@@ -105,14 +118,26 @@ class \(name)Factory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+fun \(classDecl.typeName).viewModel(owner: ViewModelStoreOwner): \(name) {
+    return ViewModelProvider(owner, object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(\(name)::class.java)) {
+                return \(name)(this@viewModel) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
+    })[\(name)::class.java]
+}
 """
   }
 
   private func generate(_ decl: VariableDeclSyntax.VarDecl, with ctx: inout ProxyGenerator.Context) -> String {
     let name = decl.name
-    let type = decl.type.map(with: &ctx, primitivesAsObjects: true)
+    let nameCap = decl.capitalizedName
 
-    let nameCap = name.capitalized
+    let type = decl.type.map(with: &ctx, primitivesAsObjects: true)
 
     return
 """
@@ -122,7 +147,7 @@ class \(name)Factory(
     private fun get\(nameCap)WithTracking(): \(type) {
         return model.get\(nameCap)WithObservationTracking {
             viewModelScope.launch(Dispatchers.Main) {
-              _\(name).value = getCountWithTracking()               
+              _\(name).value = get\(nameCap)WithTracking()               
             }
         }
     }
