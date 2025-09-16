@@ -27,7 +27,7 @@ case \($0.offset): return .\($0.element)
     return
 """
 public static func fromJavaObject(_ obj: JavaObject?) -> \(typeName) {
-  let ordinal: Int32 = JObject(obj!).get(field: "ordinal")
+  let ordinal: Int32 = JObject(obj!).call(method: "ordinal")
   switch ordinal {
   \(fromJavaCases)
   default:
