@@ -17,12 +17,14 @@ public class JObject: @unchecked Sendable {
   }()
   
   public init(_ ptr: JavaObject, weak: Bool = false) {
-    self.ptr = weak ? ptr : jni.NewGlobalRef(ptr)!
+    self.ptr = weak ? jni.NewWeakGlobalRef(ptr)! : jni.NewGlobalRef(ptr)!
     self.weak = weak
   }
     
   deinit {
-    if !self.weak {
+    if self.weak {
+      jni.DeleteWeakGlobalRef(self.ptr)
+    } else {
       jni.DeleteGlobalRef(self.ptr)
     }
   }

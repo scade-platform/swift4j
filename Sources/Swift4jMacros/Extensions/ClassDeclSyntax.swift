@@ -13,7 +13,7 @@ extension ClassDeclSyntax: JvmTypeDeclSyntax {
 private let jref: JObjectRef<\(typeName)> = .init()
 
 private nonisolated static func _self(_ obj: JavaObject?) -> Self {
-  let ptr: JavaLong = JObject(obj!).get(field: "_ptr")
+  let ptr: JavaLong = JObject(obj!).call(method: "_ptr")
   return _self(ptr)
 }
 

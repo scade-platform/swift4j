@@ -102,7 +102,7 @@ class ViewModelGenerator: SyntaxVisitor {
     return
 """
 class \(name)(
-    private val model: \(classDecl.typeName)
+    val model: \(classDecl.typeName)
 ) : ViewModel() {
   \(decls.joined(separator: "\n"))
 }

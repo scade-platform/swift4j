@@ -220,8 +220,8 @@ public final class JClass: JObject, @unchecked Sendable {
   }
 
   public func callStaticObjectMethod(method: String, sig: String, _ args : [JavaParameter]) -> JavaObject? {
-    guard let methodId = cls.getStaticMethodID(name: method, sig: sig) else  {
-      fatalError("Cannot find method \"\(method)\" with signature \"\(sig)\"")
+    guard let methodId = getStaticMethodID(name: method, sig: sig) else  {
+      fatalError("Cannot find static method \"\(method)\" with signature \"\(sig)\"")
     }
     return callStaticObjectMethod(method: methodId, args) as JavaObject?
   }

@@ -15,7 +15,7 @@ extension StructDeclSyntax: JvmTypeDeclSyntax {
     return
 """
 private static func _self(_ obj: JavaObject?) -> UnsafeMutablePointer<\(typeName)> {
-  let ptr: JavaLong = JObject(obj!).get(field: "_ptr")
+  let ptr: JavaLong = JObject(obj!).call(method: "_ptr")
   return _self(ptr) 
 }
 
