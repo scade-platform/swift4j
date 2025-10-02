@@ -82,7 +82,7 @@ public final class JClass: JObject, @unchecked Sendable {
   public func create(_ args: [JConvertible], signature: String? = nil) -> JavaObject {
     let sig = signature ?? "(\(args.reduce("", { $0 + type(of: $1).javaSignature})))V"
     guard let ctorId = getMethodID(name: "<init>", sig: sig) else {
-      fatalError("Cannot find constructor with signature (\(sig))V")
+      fatalError("Cannot find constructor with signature: \(sig)")
     }
     return create(ctor: ctorId, args.map{$0.toJavaParameter()})
   }
@@ -226,7 +226,15 @@ public final class JClass: JObject, @unchecked Sendable {
     return callStaticObjectMethod(method: methodId, args) as JavaObject?
   }
 
+  public func callStaticObjectMethod(method: String, sig: String, _ args : [JConvertible]) -> JavaObject? {
+    return callStaticObjectMethod(method: method, sig: sig, args.map{$0.toJavaParameter()}) as JavaObject?
+  }
 
+  public func callStaticObjectMethod(method: String, sig: String, _ args : JConvertible...) -> JavaObject? {
+    return callStaticObjectMethod(method: method, sig: sig, args) as JavaObject?
+  }
+
+  
   // Natives
 
   public func registerNatives(_ natives: JNINativeMethod...) throws {

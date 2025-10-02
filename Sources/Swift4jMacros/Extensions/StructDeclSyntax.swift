@@ -12,6 +12,8 @@ extension StructDeclSyntax: JvmTypeDeclSyntax {
   }
 
   func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String {
+    let fqn = fqn(from: context)
+    
     return
 """
 private static func _self(_ obj: JavaObject?) -> UnsafeMutablePointer<\(typeName)> {
@@ -35,7 +37,7 @@ public static func fromJavaObject(_ obj: JavaObject?) -> Self {
 public func toJavaObject() -> JavaObject? {
   let ptr = UnsafeMutablePointer<\(name.text)>.allocate(capacity: 1)
   ptr.initialize(to: self)  
-  return \(typeName).javaClass.create(Int(bitPattern: ptr))  
+  return \(typeName).javaClass.callStaticObjectMethod(method: "fromPtr", sig: "(J)L\(fqn);", Int(bitPattern: ptr))  
 }
 """
   }
