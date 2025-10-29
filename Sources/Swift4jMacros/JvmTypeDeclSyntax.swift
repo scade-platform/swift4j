@@ -37,7 +37,7 @@ extension JvmTypeDeclSyntax {
 """
 \( (isMainActorIsolated ?? false) ? "@MainActor" : "")
 @_cdecl("Java_\(fqnEscaped)_\(jniTypeName)_1class_1init")
-func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClass?) {    
+public func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClass?) {    
   \(expandRegisterNatives(in: context))
 }
 """
