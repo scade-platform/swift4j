@@ -19,7 +19,7 @@ public enum Visibility: String {
 
 extension ExportableDeclSyntax {
   public var visibility: Visibility {
-    for mod in modifiers {
+    for mod in modifiers.filter({$0.detail == nil}) {
       if let visibility = Visibility(rawValue: mod.name.text) {
         return visibility
       }

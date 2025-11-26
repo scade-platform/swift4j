@@ -29,7 +29,7 @@ extension VariableDeclSyntax: MemberDeclSyntax {
 
       if let accessorBlock = $0.accessorBlock {
         hasComputedGet = accessorBlock.hasGetter
-        hasComputedSet = accessorBlock.hasSetter
+        hasComputedSet = accessorBlock.hasSetter && (accessorVisibility("set") != .private)
       } else {
         hasComputedGet = false
         hasComputedSet = false
@@ -51,6 +51,17 @@ extension VariableDeclSyntax: MemberDeclSyntax {
   public var isThrowing: Bool {
     ///TODO: implement for computed properties
     return false
+  }
+
+  func accessorVisibility(_ acc: String) -> Visibility? {
+    for mod in modifiers {
+      if let modDetail = mod.detail?.detail.tokenKind, modDetail == .identifier(acc) {
+        if let visibility = Visibility(rawValue: mod.name.text) {
+          return visibility
+        }
+      }
+    }
+    return nil
   }
 }
 
