@@ -18,10 +18,12 @@ class CtorGenerator {
 
     let callParams = params.map { $0.name }.joined(separator: ", ")
     let paramDecls = params.map { "\($0.type) \($0.name)" }.joined(separator: ", ")
+    
+    let throwsClause = initDecl.isThrowing ? " throws Exception" : ""
 
     return
 """
-  public \(className)(\(paramDecls)) {
+  public \(className)(\(paramDecls)) \(throwsClause) {
     this(new SwiftPtr(\(className).init\(index)(\(callParams))));
   }
   private static native long init\(index)(\(paramDecls));

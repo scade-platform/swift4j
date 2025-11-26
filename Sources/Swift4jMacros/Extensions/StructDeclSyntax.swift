@@ -66,10 +66,10 @@ fileprivate static let deinit_jni: deinit_jni_t = { _, _, ptr in
 """
   }
 
-  func expandInitCall(params: String) -> String {
+  func expandInitCall(params: String, throwing: Bool) -> String {
 """
 let ptr = UnsafeMutablePointer<\(name.text)>.allocate(capacity: 1)
-ptr.initialize(to: .init(\(params)))
+ptr.initialize(to: \(throwing ? "try " : "").init(\(params)))
 return JavaLong(Int(bitPattern: ptr))
 """
   }

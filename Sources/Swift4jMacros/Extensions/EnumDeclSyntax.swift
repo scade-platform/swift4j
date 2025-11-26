@@ -48,7 +48,7 @@ public func toJavaObject() -> JavaObject? {
     ""
   }
 
-  func expandInitCall(params: String) -> String {
+  func expandInitCall(params: String, throwing: Bool) -> String {
     ""
   }
 }

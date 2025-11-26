@@ -18,10 +18,23 @@ extension InitializerDeclSyntax {
 
     let mapping = try signature.paramsMapping()
 
+    var call = typeDecl.expandInitCall(params: mapping.mapped, throwing: isThrowing)
+    if isThrowing {
+      call =
+"""
+  do { 
+    \(call) 
+  } catch { 
+    jni.throwException(error)
+    return 0
+  }
+"""
+    }
+
     let body =
 """
-  \(mapping.stmts.joined(separator: "\n  "))
-  \(typeDecl.expandInitCall(params: mapping.mapped))
+  \(mapping.stmts.joined(separator: "\n  "))  
+  \(call)
 """
 
     return
