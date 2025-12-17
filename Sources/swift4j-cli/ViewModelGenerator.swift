@@ -119,16 +119,25 @@ class \(name)Factory(
     }
 }
 
-fun \(classDecl.typeName).viewModel(owner: ViewModelStoreOwner): \(name) {
-    return ViewModelProvider(owner, object : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(\(name)::class.java)) {
-                return \(name)(this@viewModel) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
-    })[\(name)::class.java]
+fun \(classDecl.typeName).viewModel(owner: ViewModelStoreOwner? = null, key: String? = null): \(name) {    
+    if (owner != null) {
+      val provider = ViewModelProvider(owner, object : ViewModelProvider.Factory {
+          @Suppress("UNCHECKED_CAST")
+          override fun <T : ViewModel> create(modelClass: Class<T>): T {
+              if (modelClass.isAssignableFrom(\(name)::class.java)) {
+                  return \(name)(this@viewModel) as T
+              }
+              throw IllegalArgumentException("Unknown ViewModel class")
+          }
+      })
+      
+      if (key != null) {
+          return provider.get(key, \(name)::class.java)
+      } else {
+          return provider.get(\(name)::class.java)
+      }
+    }
+    return \(name)(this)
 }
 """
   }
@@ -138,6 +147,13 @@ fun \(classDecl.typeName).viewModel(owner: ViewModelStoreOwner): \(name) {
     let nameCap = decl.capitalizedName
 
     let type = decl.type.map(with: &ctx, primitivesAsObjects: true)
+
+    let updateDecl = decl.readonly ? "" :
+"""
+    fun update\(nameCap)(value: \(type)) {
+        model.\(name) = value
+    }
+"""
 
     return
 """
@@ -152,9 +168,8 @@ fun \(classDecl.typeName).viewModel(owner: ViewModelStoreOwner): \(name) {
         }
     }
 
-    fun update\(nameCap)(value: \(type)) {
-        model.\(name) = value
-    }
+\(updateDecl)
+
 """
   }
 }

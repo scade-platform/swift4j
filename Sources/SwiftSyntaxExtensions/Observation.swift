@@ -13,6 +13,7 @@ extension VariableDeclSyntax {
 
 extension VariableDeclSyntax.VarDecl {
   public func observable(_ varDecl: VariableDeclSyntax) -> Bool {
-    !computed && varDecl.isObservable
+    //!computed && varDecl.isObservable
+    varDecl.isObservable
   }
 }
