@@ -357,12 +357,7 @@ extension JNI {
   }
 
   public func throwException(_ error: Error) {
-    guard let cls = FindClass("java/lang/Exception") else {
-      fatalError("Cannot find exception class")
-    }
-    guard ThrowNew(cls, "\(error)") else {
-      fatalError("Throwing an exception failed")
-    }
+    error.throwAsJavaException()
   }
 }
 

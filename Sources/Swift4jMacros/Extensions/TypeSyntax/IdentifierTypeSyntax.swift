@@ -29,13 +29,13 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
     case "Float": primitivesAsObjects ? "Ljava/lang/Float;" : "F"
     case "Double": primitivesAsObjects ? "Ljava/lang/Double;" : "D"
     case "String": "Ljava/lang/String;"
-    default: "L\\(\(name.text).javaName);" //"\\(\(name.text).javaSignature)"
+      default: "L\\(\(description).javaName);" //"\\(\(name.text).javaSignature)"
     }
   }
 
   func jniType(primitivesAsObjects: Bool) -> String {
     switch name.text {
-    case "Void": "void"
+    case "Void": "Void"
     case "Bool": primitivesAsObjects ? "JavaObject" : "JavaBoolean"
     case "Int", "Int64": primitivesAsObjects ? "JavaObject" : "JavaLong"
     case "Int32": primitivesAsObjects ? "JavaObject" : "JavaInt"

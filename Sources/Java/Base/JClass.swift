@@ -163,6 +163,18 @@ public final class JClass: JObject, @unchecked Sendable {
     callStatic(method:method, args.map{$0.toJavaParameter()})
   }
 
+  public func callStatic(method: String, sig: String, _ args : [JavaParameter]) -> Void {
+    guard let methodId = getStaticMethodID(name: method, sig: sig) else  {
+      fatalError("Cannot find static method \(method) with signature \(sig)")
+    }
+
+    callStatic(method: methodId, args)
+  }
+
+  public func callStatic(method: String, sig: String, _ args : JParameterConvertible...) -> Void {
+    callStatic(method: method, sig: sig, args.map{$0.toJavaParameter()})
+  }
+
   public func callStatic(method: String, _ args : JConvertible...) -> Void {
     callStatic(method: method, args: args)
   }
@@ -185,6 +197,8 @@ public final class JClass: JObject, @unchecked Sendable {
       
 
 
+
+
   
   public func callStatic<T: JConvertible>(method: JavaMethodID, _ args: [JavaParameter]) -> T {
     return T.fromStaticMethod(method, on: self.ptr, args: args)
@@ -192,6 +206,17 @@ public final class JClass: JObject, @unchecked Sendable {
 
   public func callStatic<T: JConvertible>(method: JavaMethodID, _ args: JParameterConvertible...) -> T {
     return callStatic(method: method, args.map{$0.toJavaParameter()})
+  }
+
+  public func callStatic<T: JConvertible>(method: String, sig: String, _ args: [JavaParameter]) -> T {
+    guard let methodId = getStaticMethodID(name: method, sig: sig) else  {
+      fatalError("Cannot find static method \(method) with signature \(sig)")
+    }
+    return callStatic(method: methodId, args)
+  }
+
+  public func callStatic<T: JConvertible>(method: String, sig: String, _ args: JParameterConvertible...) -> T {
+    return callStatic(method: method, sig: sig, args.map{$0.toJavaParameter()})
   }
 
   public func callStatic<T>(method: String, _ args : JConvertible...) -> T where T: JConvertible {

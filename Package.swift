@@ -51,6 +51,8 @@ let package = Package(
                   "Swift4jMacros"
                 ],
                 resources: [
+                  .process("java/io/scade/swift4j/Result.java"),
+                  .process("java/io/scade/swift4j/SwiftError.java"),
                   .process("java/io/scade/swift4j/SwiftPtr.java")
                 ]),
 
