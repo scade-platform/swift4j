@@ -10,7 +10,8 @@ extension TypeSyntax {
     FunctionTypeSyntax.self,
     ArrayTypeSyntax.self,
     AttributedTypeSyntax.self,
-    OptionalTypeSyntax.self
+    OptionalTypeSyntax.self,
+    TupleTypeSyntax.self
   ]}
 
   func map() -> (any MappableTypeSyntax)? {

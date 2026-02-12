@@ -7,31 +7,6 @@ import SwiftSyntaxExtensions
 
 
 extension FunctionTypeSyntax: JvmMappedTypeSyntax {
-  func paramName() throws -> String {
-    guard let paramName = typedEntityName else {
-      throw JvmMacrosError.message("Unknown function parameter name")
-    }
-    return paramName
-  }
-
-  func javaCallMethod() throws -> (name: String, sig: String) {
-    let name: String
-    if parameters.count == 0 && !isVoid {
-      name = "get"
-    } else {
-      name = isVoid ? "accept" : "apply"
-    }
-
-    let params = Array<String>(repeating: "Ljava/lang/Object;", count: parameters.count)
-    let sig = "(\(params.joined()))\(isVoid ? "V" : "Ljava/lang/Object;")"
-
-/*
-    let params = try parameters.map{ try $0.type.jniSignature(primitivesAsObjects: true) }
-    let sig = "(\(params.joined()))\(try returnClause.type.jniSignature(primitivesAsObjects: true))"
-*/
-
-    return (name, sig)
-  }
 
   func jniSignature(primitivesAsObjects: Bool) -> String {
     "L\(javaFunctionalInterface.replacingOccurrences(of: ".", with: "/"));"
@@ -43,24 +18,74 @@ extension FunctionTypeSyntax: JvmMappedTypeSyntax {
 
   func toJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType { MappingRetType(mapped: "nil") }
 
-  func fromJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
-    let paramName = try paramName()
+  func fromJava(_ expr: String, primitivesAsObjects: Bool, optional: Bool) throws -> MappingRetType {
+    let paramName = (try? paramName) ?? expr
+    
+    let closureVar = "_\(paramName)"
+    let closureObj = "\(paramName)Obj"
+    let closureType = "@Sendable \(_syntaxNode.trimmedDescription)"
+    
+    let closureBody = try makeBridgingClosureBody(closureName: closureObj)
 
-    let stmts: [String] = [
-      "guard let \(paramName) = \(paramName) else { fatalError(\"Cannot call a null closure\") }",
-      "let _\(paramName) = JObject(\(paramName))"
-    ]
+    let stmts: [String]
+    if !optional {
+      stmts = [
+"""
+  guard let \(paramName) = \(paramName) else { fatalError(\"Cannot call a null closure\") }
+  let \(closureObj) = JObject(\(paramName))
+  let \(closureVar): \(closureType) = {
+    \(closureBody)
+  }
+"""
+      ]
+    } else {
+      stmts = [
+"""
+  let \(closureVar): (\(closureType))?
+  if let \(paramName) = \(paramName) {
+    let \(closureObj) = JObject(\(paramName))
+    \(closureVar) = {
+      \(closureBody)
+    }  
+  } else {
+    \(closureVar) = nil
+  }
+"""
+      ]
+    }
 
-    let closure_param =
-"""
-{
-\(try makeBridgingClosureBody())
-}
-"""
-    return MappingRetType(mapped: closure_param, stmts: stmts)
+    return MappingRetType(mapped: closureVar, stmts: stmts)
   }
 
-  func makeBridgingClosureBody() throws -> String {
+  private var paramName: String {
+    get throws {
+      guard let paramName = typedEntityName else {
+        throw JvmMacrosError.message("Unknown function parameter name")
+      }
+      return paramName
+    }
+  }
+
+  private func javaCallMethod() throws -> (name: String, sig: String) {
+    let name: String
+    if parameters.count == 0 {
+      name = isVoid ? "run" : "get"
+    } else {
+      name = isVoid ? "accept" : "apply"
+    }
+
+    let params = Array<String>(repeating: "Ljava/lang/Object;", count: parameters.count)
+    let sig = "(\(params.joined()))\(isVoid ? "V" : "Ljava/lang/Object;")"
+
+    /*
+     let params = try parameters.map{ try $0.type.jniSignature(primitivesAsObjects: true) }
+     let sig = "(\(params.joined()))\(try returnClause.type.jniSignature(primitivesAsObjects: true))"
+     */
+
+    return (name, sig)
+  }
+
+  private func makeBridgingClosureBody(closureName: String) throws -> String {
     let mapping = try parameters.enumerated()
       .reduce(into: ([String](), [String]())) {
         let mapping = try $1.1.type.toJava("$\($1.0)", primitivesAsObjects: true)
@@ -76,14 +101,13 @@ extension FunctionTypeSyntax: JvmMappedTypeSyntax {
 
     let method = try javaCallMethod()
 
-
     let call: String
     if isVoid {
-      call = "_\(try paramName()).call(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
+      call = "\(closureName).call(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
 
     } else {
       stmts.append(
-        "let res: JavaObject? = _\(try paramName()).callObjectMethod(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
+        "let res: JavaObject? = \(closureName).callObjectMethod(method: \"\(method.name)\", sig: \"\(method.sig)\", params)"
       )
       let call_ret = try returnClause.type.fromJava("res", primitivesAsObjects: true)
       

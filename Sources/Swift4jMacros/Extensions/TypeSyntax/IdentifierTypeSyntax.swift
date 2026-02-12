@@ -70,7 +70,7 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
     }
   }
 
-  func fromJava(_ expr: String, primitivesAsObjects: Bool) -> MappingRetType {
+  func fromJava(_ expr: String, primitivesAsObjects: Bool, optional: Bool) -> MappingRetType {
     if isPrimitive && !primitivesAsObjects {
       switch name.text {
           case "Int":
@@ -90,7 +90,8 @@ extension IdentifierTypeSyntax: JvmMappedTypeSyntax {
 """
       }
     } else {
-      let _expr = "\(name.text).fromJavaObject(\(expr))"
+      let _type = _syntaxNode.trimmedDescription + (optional ? "?" : "")
+      let _expr = "\(_type).fromJavaObject(\(expr))"
 
       guard let paramName = typedEntityName else {
         return MappingRetType(mapped: _expr)

@@ -23,7 +23,9 @@ extension FunctionTypeSyntax: MappableTypeSyntax {
         paramTypes.append(retType)
       }
 
-      funcType += "<\(paramTypes.joined(separator: ", "))>"
+      if !paramTypes.isEmpty {
+        funcType += "<\(paramTypes.joined(separator: ", "))>"
+      }
     }
 
     return String(funcType)

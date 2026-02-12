@@ -20,11 +20,11 @@ extension OptionalTypeSyntax: JvmMappedTypeSyntax {
   }
 
   func toJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
-    MappingRetType(mapped: "\(expr).toJavaObject()")
+    try wrappedType.toJava(expr, primitivesAsObjects: true)
   }
   
-  func fromJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
-    MappingRetType(mapped: "\(_syntaxNode.trimmedDescription).fromJavaObject(\(expr))")
+  func fromJava(_ expr: String, primitivesAsObjects: Bool, optional: Bool) throws -> MappingRetType {
+    try wrappedType.fromJava(expr, primitivesAsObjects: true, optional: true)
   }
 
 }

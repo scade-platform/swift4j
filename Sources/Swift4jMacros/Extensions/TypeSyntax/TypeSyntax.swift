@@ -20,6 +20,9 @@ extension TypeSyntax {
     } else if let typeSyntax = self.as(OptionalTypeSyntax.self) {
       return typeSyntax
 
+    } else if let typeSyntax = self.as(TupleTypeSyntax.self) {
+      return typeSyntax
+
     } else if let attributedTypeSyntax = self.as(AttributedTypeSyntax.self) {
       return try attributedTypeSyntax.baseType.map()
     }
@@ -43,8 +46,8 @@ extension TypeSyntax {
     try map().toJava(expr, primitivesAsObjects: primitivesAsObjects)
   }
 
-  func fromJava(_ expr: String, primitivesAsObjects: Bool = false) throws -> MappingRetType {
-    try map().fromJava(expr, primitivesAsObjects: primitivesAsObjects)
+  func fromJava(_ expr: String, primitivesAsObjects: Bool = false, optional: Bool = false) throws -> MappingRetType {
+    try map().fromJava(expr, primitivesAsObjects: primitivesAsObjects, optional: optional)
   }
 }
 
@@ -55,7 +58,7 @@ protocol JvmMappedTypeSyntax: SyntaxProtocol {
   func jniTypeDefaultValue(primitivesAsObjects: Bool) throws -> String
 
   func toJava(_: String, primitivesAsObjects: Bool) throws -> MappingRetType
-  func fromJava(_: String, primitivesAsObjects: Bool) throws -> MappingRetType
+  func fromJava(_: String, primitivesAsObjects: Bool, optional: Bool) throws -> MappingRetType
 }
 
 

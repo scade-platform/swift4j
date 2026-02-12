@@ -19,8 +19,9 @@ extension ArrayTypeSyntax: JvmMappedTypeSyntax {
     return MappingRetType(mapped: "\(expr).toJavaObject()")
   }
 
-  func fromJava(_ expr: String, primitivesAsObjects: Bool) throws -> MappingRetType {
-    let _expr = "\(trimmedDescription).fromJavaObject(\(expr))"
+  func fromJava(_ expr: String, primitivesAsObjects: Bool, optional: Bool) throws -> MappingRetType {
+    let _type = _syntaxNode.trimmedDescription + (optional ? "?" : "")
+    let _expr = "\(_type).fromJavaObject(\(expr))"
 
     guard let paramName = typedEntityName else {
       return MappingRetType(mapped: _expr)
