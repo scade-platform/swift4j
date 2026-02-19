@@ -19,12 +19,17 @@ class MethodGenerator {
 
   func generate(with ctx: inout Context) -> String {
     let params = funcDecl.signature.paramsMapping(with: &ctx)
-    let retType = funcDecl.signature.returnClause?.type.map(with: &ctx) ?? "void"
+
+    var retType = funcDecl.signature.returnClause?.type.map(with: &ctx) ?? (funcDecl.isAsync ? "Void" : "void")
+    if funcDecl.isAsync {
+      retType = "CompletableFuture<\(retType)>"
+      ctx.imports.insert("java.util.concurrent.CompletableFuture")
+    }
 
     let callParams = (funcDecl.isStatic ? [] : ["_ptr()"]) + params.map{$0.name}
 
     var call = (funcDecl.isStatic ? className : "this") +  ".\(name)Impl(\(callParams.joined(separator: ", ")))"
-    call = funcDecl.signature.returnClause != nil ? "return \(call)" : call
+    call = funcDecl.isAsync || funcDecl.signature.returnClause != nil ? "return \(call)" : call
 
     let paramDecls = params.map {"\($0.type) \($0.name)"}
     let paramDeclsImpl = (funcDecl.isStatic ? [] : ["long ptr"]) + paramDecls

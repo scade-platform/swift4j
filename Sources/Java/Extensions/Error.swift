@@ -1,6 +1,4 @@
 
-
-///TODO: add full support of the JConvertible
 extension Error {
   public func toJavaObject() -> JavaObject? {
     guard let cls = JClass(fqn: "io/scade/swift4j/SwiftError") else {
@@ -19,4 +17,3 @@ extension Error {
     }
   }
 }
-

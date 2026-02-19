@@ -9,7 +9,8 @@ import SwiftSyntaxExtensions
 extension FunctionDeclSyntax {
   func jniSignature() throws -> String {
     let params = try (isStatic ? [] : ["J"]) + signature.jniParams()
-    return "(\(params.joined()))\(try signature.returnClause?.type.jniSignature() ?? "V")"
+    let returnSig = isAsync ? "Ljava/util/concurrent/CompletableFuture;" : try signature.returnClause?.type.jniSignature() ?? "V"
+    return "(\(params.joined()))\(returnSig)"
   }
 
   func makeBridgingDecls(typeDecl: any JvmTypeDeclSyntax, num: Int? = nil) throws -> String {
@@ -18,7 +19,7 @@ extension FunctionDeclSyntax {
         + (isStatic ? ["JavaClass?"] : ["JavaObject?", "JavaLong"])
         + signature.parameterClause.parameters.map{ try $0.type.jniType() }
 
-    let returnType = try signature.returnClause?.type.jniType() ?? "Void"
+    let returnType = isAsync ? "JavaObject" : try signature.returnClause?.type.jniType() ?? "Void"
 
     let closureParams = ["_", "_"]
         + (isStatic ? [] : ["ptr"])
@@ -69,7 +70,15 @@ fileprivate static let \(name)_jni: \(name)_jni_t = {\(closureParams.joined(sepa
       }
     }
 
-    if isThrowing {
+    if isAsync {
+      call =
+"""
+  return execWithFuture { 
+    \(call)
+  }
+"""
+
+    } else if isThrowing {
       call =
 """
   do { 
@@ -85,15 +94,6 @@ fileprivate static let \(name)_jni: \(name)_jni_t = {\(closureParams.joined(sepa
   return \(retDefault)
 """
       }
-    }
-
-    if isAsync {
-      call =
-"""
-  Task { 
-    \(call)
-  }
-"""
     }
 
     let body =
