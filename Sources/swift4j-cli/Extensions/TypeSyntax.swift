@@ -24,7 +24,10 @@ extension TypeSyntax {
   }
 
   func map(with ctx: inout ProxyGenerator.Context) -> String {
-    return map(with: &ctx, primitivesAsObjects: false)
+    switch ctx.settings.language {
+      case .kotlin: return map(with: &ctx, primitivesAsObjects: true)
+      default: return map(with: &ctx, primitivesAsObjects: false)
+    }
   }
 
   func map(with ctx: inout ProxyGenerator.Context, primitivesAsObjects: Bool) -> String {

@@ -20,18 +20,25 @@ struct MappingRetType {
   }
 
   /*
-  func join(post: PostFunc?) -> PostFunc? {
-    guard let post = post else { return self.post }
-    guard let pre_post = self.post else { return post }
-    
-    return { post(pre_post($0)) }
-  }
-  */
+   func join(post: PostFunc?) -> PostFunc? {
+   guard let post = post else { return self.post }
+   guard let pre_post = self.post else { return post }
+
+   return { post(pre_post($0)) }
+   }
+   */
 }
 
 
-extension FunctionParameterSyntax {
-  var name: String { (secondName ?? firstName).text }
+extension ParameterSyntax {
+  var name: String {
+    get throws {
+      guard let name = self.name else {
+        throw JvmMacrosError.message("Unsupported function parameter syntax")
+      }
+      return name
+    }
+  }
 
   func toJava() throws -> MappingRetType {
     try type.toJava(name)
@@ -40,18 +47,12 @@ extension FunctionParameterSyntax {
   func fromJava() throws -> MappingRetType {
     let mapping = try type.fromJava(name)
 
-    switch firstName.tokenKind {
-    case .identifier(name):
-      return MappingRetType(mapped: "\(name): \(mapping.mapped)",
+    if let passedName = passedName {
+      return MappingRetType(mapped: "\(passedName): \(mapping.mapped)",
                             stmts: mapping.stmts,
                             post: mapping.post)
-
-    case .wildcard:
+    } else {
       return mapping
-
-    default:
-      throw JvmMacrosError.message("Unsupported function parameter syntax")
     }
-
   }
 }

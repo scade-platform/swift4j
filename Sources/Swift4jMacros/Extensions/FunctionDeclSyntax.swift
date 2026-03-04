@@ -8,7 +8,7 @@ import SwiftSyntaxExtensions
 
 extension FunctionDeclSyntax {
   func jniSignature() throws -> String {
-    let params = try (isStatic ? [] : ["J"]) + signature.jniParams()
+    let params = try (isStatic ? [] : ["J"]) + signature.jniSignatures()
     let returnSig = isAsync ? "Ljava/util/concurrent/CompletableFuture;" : try signature.returnClause?.type.jniSignature() ?? "V"
     return "(\(params.joined()))\(returnSig)"
   }
@@ -17,13 +17,13 @@ extension FunctionDeclSyntax {
     let paramTypes = try
       ["UnsafeMutablePointer<JNIEnv>"]
         + (isStatic ? ["JavaClass?"] : ["JavaObject?", "JavaLong"])
-        + signature.parameterClause.parameters.map{ try $0.type.jniType() }
+        + signature.jniTypes()
 
     let returnType = isAsync ? "JavaObject" : try signature.returnClause?.type.jniType() ?? "Void"
 
-    let closureParams = ["_", "_"]
+    let closureParams = try ["_", "_"]
         + (isStatic ? [] : ["ptr"])
-        +  signature.parameterClause.parameters.map{ $0.name }
+        + signature.jniParams()
 
     let _self = isStatic
       ? "\(typeDecl.typeName).self"

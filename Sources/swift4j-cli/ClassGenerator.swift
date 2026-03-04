@@ -29,7 +29,7 @@ class ClassGenerator<T: TypeDeclSyntax>: TypeGenerator<T> {
 
 
 extension ClassGenerator: TypeGeneratorProtocol {
-  func generate(with ctx: inout Context) -> String {
+  func generate(with ctx: inout Context) -> TypeProxy {
     let ctors = ctorGens.enumerated().map{$1.generate(with: &ctx, index: $0)}.joined(separator: "\n\n")
 
     let std_ctor_dtor: String
@@ -93,7 +93,7 @@ extension ClassGenerator: TypeGeneratorProtocol {
 """
     }
 
-    return
+    let source =
 """
 public \(nested ? "static" : "") class \(name) {
 
@@ -119,8 +119,15 @@ public \(nested ? "static" : "") class \(name) {
 
 \(methodGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
 
-\(nestedTypeGens.map{$0.generate(with: &ctx)}.joined(separator: "\n\n"))
+\(nestedTypeGens.compactMap {
+    let proxy = $0.generate(with: &ctx)
+    guard proxy is JavaTypeProxy else { return nil }
+    return $0.generate(with: &ctx).source
+  }
+  .joined(separator: "\n\n")
+)
 }
 """
+    return JavaTypeProxy(name: name, source: source)
   }
 }

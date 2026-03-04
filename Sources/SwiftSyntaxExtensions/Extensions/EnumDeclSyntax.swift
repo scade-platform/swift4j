@@ -2,6 +2,10 @@ import SwiftSyntax
 
 public extension EnumDeclSyntax {
 
+  var withAssociatedValues: Bool {
+    caseDecls().contains { $0.parameterClause != nil }
+  }
+
   func caseDecls() -> [EnumCaseElementSyntax] {
     self.memberBlock.members.flatMap { member in
       guard let elements = member.decl.as(EnumCaseDeclSyntax.self)?.elements else {

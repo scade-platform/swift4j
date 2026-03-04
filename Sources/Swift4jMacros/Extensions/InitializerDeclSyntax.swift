@@ -8,17 +8,17 @@ import SwiftSyntaxExtensions
 
 extension InitializerDeclSyntax {
   func jniSignature() throws -> String {
-    try "(\(signature.jniParams().joined()))J"
+    try "(\(signature.jniSignatures().joined()))J"
   }
 
   func makeBridgingDecls(typeDecl: any JvmTypeDeclSyntax, index: Int) throws -> String {
     let name = "init\(index)"
-    let paramTypes = try ["UnsafeMutablePointer<JNIEnv>", "JavaClass?"] + signature.parameterClause.parameters.map{ try $0.type.jniType() }
-    let closureParams = ["_", "_"] + signature.parameterClause.parameters.map{ $0.name }
+    let paramTypes = try ["UnsafeMutablePointer<JNIEnv>", "JavaClass?"] + signature.jniTypes()
+    let closureParams = try ["_", "_"] + signature.jniParams()
 
     let mapping = try signature.paramsMapping()
 
-    var call = typeDecl.expandInitCall(params: mapping.mapped, throwing: isThrowing)
+    var call = try typeDecl.expandInitCall(params: mapping.mapped, throwing: isThrowing, initName: "init")
     if isThrowing {
       call =
 """

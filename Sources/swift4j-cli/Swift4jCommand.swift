@@ -58,7 +58,7 @@ struct Swift4jCommand: ParsableCommand {
 
     for p in paths {
       for res in try proxyGenerator.run(path: p) {
-        try write(res.content, to: "\(res.classname).java")
+        try write(res.source, to: res.filename)
       }
 
       if generateAndroidViewModels {

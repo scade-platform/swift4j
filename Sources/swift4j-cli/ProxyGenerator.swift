@@ -5,14 +5,16 @@ import SwiftParser
 
 import SwiftSyntaxExtensions
 
+
 class ProxyGenerator: SyntaxVisitor {
   struct Context {
-    var package: String
-    var settings: GeneratorSettings
+    let package: String
+    let settings: Settings
+
     var imports: Set<String> = []
   }
   
-  struct GeneratorSettings {
+  struct Settings {
     enum Language {
       case java(version: Int)
       case kotlin
@@ -22,13 +24,13 @@ class ProxyGenerator: SyntaxVisitor {
   }
 
   private let package: String
-  private let settings: GeneratorSettings
+  private let settings: Settings
 
   private var typeGens: [TypeGeneratorProtocol] = []
 
   init(package: String, javaVersion: Int) {
     self.package = package
-    self.settings = GeneratorSettings(language: .java(version: javaVersion))
+    self.settings = Settings(language: .java(version: javaVersion))
 
     super.init(viewMode: .fixedUp)
   }
@@ -54,20 +56,20 @@ class ProxyGenerator: SyntaxVisitor {
     return .skipChildren
   }
 
-  func run(path: String) throws -> [(classname: String, content: String)] {
+  func run(path: String) throws -> [(filename: String, source: String)] {
     let url = URL(fileURLWithPath: path)
     let source = try String(contentsOf: url, encoding: .utf8)
     let sourceFile = Parser.parse(source: source)
 
     walk(sourceFile)
 
-    return typeGens.map { ($0.name, generate($0)) }
+    return typeGens.map { generate($0) }
   }
 
-  func generate(_ typeGen: TypeGeneratorProtocol) -> String {
+  func generate(_ typeGen: TypeGeneratorProtocol) -> (filename: String, source: String) {
     var ctx = Context(package: package, settings: settings)
 
-    let typeDecl = typeGen.generate(with: &ctx)
+    let typeProxy = typeGen.generate(with: &ctx)
 
     var imports = [String](ctx.imports)
 
@@ -77,16 +79,7 @@ class ProxyGenerator: SyntaxVisitor {
       }
     }
 
-    return
-"""
-package \(self.package);
-
-import io.scade.swift4j.SwiftPtr; 
-
-\(imports.map{"import \($0);"}.joined(separator: "\n"))
-
-\(typeDecl)
-"""
+    return typeProxy.generate(in: package, with: imports)
   }
 
   func generatePackageClass() -> String {
@@ -94,5 +87,18 @@ import io.scade.swift4j.SwiftPtr;
 package \(self.package);
 
 """
+  }
+}
+
+
+extension ProxyGenerator.Context {
+  mutating func with<R>(language: ProxyGenerator.Settings.Language, _ body: (inout ProxyGenerator.Context) -> R) -> R {
+    var tmpCtx = ProxyGenerator.Context(package: self.package,
+                                        settings: .init(language: language),
+                                        imports: self.imports)
+    let res = body(&tmpCtx)
+    self.imports = tmpCtx.imports
+
+    return res
   }
 }

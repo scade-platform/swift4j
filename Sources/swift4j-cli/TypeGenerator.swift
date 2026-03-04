@@ -9,7 +9,7 @@ protocol TypeGeneratorProtocol {
 
   var isRefType: Bool { get }
 
-  func generate(with ctx: inout ProxyGenerator.Context) -> String
+  func generate(with ctx: inout ProxyGenerator.Context) -> TypeProxy
 }
 
 
@@ -22,7 +22,7 @@ class TypeGenerator<T: TypeDeclSyntax>: SyntaxVisitor {
   typealias Context = ProxyGenerator.Context
 
   let typeDecl: T
-  let settings: ProxyGenerator.GeneratorSettings
+  let settings: ProxyGenerator.Settings
 
   var nestedTypeGens: [any TypeGeneratorProtocol] = []
 
@@ -30,7 +30,7 @@ class TypeGenerator<T: TypeDeclSyntax>: SyntaxVisitor {
 
   var nested: Bool { typeDecl.parentDecl != nil }
 
-  init(_ typeDecl: T, settings: ProxyGenerator.GeneratorSettings) {
+  init(_ typeDecl: T, settings: ProxyGenerator.Settings) {
     self.typeDecl = typeDecl
     self.settings = settings
 

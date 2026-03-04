@@ -122,6 +122,10 @@ public final class JClass: JObject, @unchecked Sendable {
     return JObject(obj)
   }
 
+  public func getStatic(field: JavaFieldID) -> JavaObject? {
+    return jni.GetStaticObjectField(ptr, field)
+  }
+
   public func getStatic(field: String, sig: String) -> JObject? {
     guard let fieldId = getStaticFieldID(name: field, sig: sig) else {
       fatalError("Cannot find static field \(field) with signature \(sig)")
@@ -129,6 +133,12 @@ public final class JClass: JObject, @unchecked Sendable {
     return self.getStatic(field: fieldId)
   }
 
+  public func getStatic(field: String, sig: String) -> JavaObject? {
+    guard let fieldId = getStaticFieldID(name: field, sig: sig) else {
+      fatalError("Cannot find static field \(field) with signature \(sig)")
+    }
+    return self.getStatic(field: fieldId)
+  }
 
 
   public func setStatic<T: JConvertible>(field: JavaFieldID, value: T) {

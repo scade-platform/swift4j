@@ -6,26 +6,45 @@ import SwiftSyntaxExtensions
 
 protocol JvmTypeDeclSyntax: TypeDeclSyntax {
   var selfExpr: String { get }
-  var shouldExpandMemberDecls: Bool { get }
+
+  func expandMembers(in context: some MacroExpansionContext) throws -> [DeclSyntax]
+
+  func expandJavaClassDecl(in context: some MacroExpansionContext) -> String
 
   func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String
+
   func expandCtorDecls(in context: some MacroExpansionContext) throws -> String
 
-  func expandInitCall(params: String, throwing: Bool) -> String
+  func expandInitCall(params: String, throwing: Bool, initName: String) throws -> String
+
+  func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax]) throws -> String
+
+  func expandCreateNativeMethods(parents: [any TypeDeclSyntax]) throws -> [String]
 }
-
-
 
 extension JvmTypeDeclSyntax {
   var selfExpr: String { "_self(ptr)" }
 
-  var shouldExpandMemberDecls: Bool { true }
+  func expandMembers(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+    return try expandMembersDefault(in: context)
+  }
 
+  func expandJavaClassDecl(in context: some MacroExpansionContext) -> String {
+    return try expandJavaClassDeclDefault(in: context)
+  }
+
+  func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax]) throws -> String {
+    return try expandRegisterNativesDefault(in: context, parents: parents)
+  }
+
+  func expandCreateNativeMethods(parents: [any TypeDeclSyntax]) throws -> [String] {
+    return try expandCreateNativeMethodsDefault(parents: parents)
+  }
+}
+
+extension JvmTypeDeclSyntax {
   // Expand JVM class init function
-
   func expandPeer(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-    guard shouldExpandMemberDecls else { return [] }
-
     let jniTypeName = typeName.replacingOccurrences(of: "_", with: "_1")
 
     var fqnEscaped = jniTypeName
@@ -38,15 +57,14 @@ extension JvmTypeDeclSyntax {
 \( (isMainActorIsolated ?? false) ? "@MainActor" : "")
 @_cdecl("Java_\(fqnEscaped)_\(jniTypeName)_1class_1init")
 public func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: JavaClass?) {    
-  \(expandRegisterNatives(in: context))
+  \(try expandRegisterNatives(in: context, parents: []))
 }
 """
     return ["\(raw: decl)"]
   }
   
   // Expand members
-
-  func expandMembers(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+  func expandMembersDefault(in context: some MacroExpansionContext) throws -> [DeclSyntax] {
     let syntax =
 """
 \(expandJavaClassDecl(in: context))
@@ -54,15 +72,21 @@ public func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: J
 \(try expandCtorDecls(in: context))
 \(expandFuncDecls(in: context))
 """
-    
+
 //\(expandVarDecls(in: context))
 
     return ["\(raw: syntax)"]
   }
+
+
 }
 
 
 extension JvmTypeDeclSyntax {
+  func fqn(with parents: [any TypeDeclSyntax]) -> String {
+    parents.isEmpty ? typeName : parents.map{$0.typeName}.joined(separator: ".") + "." + typeName
+  }
+
   func fqn(from context: some MacroExpansionContext) -> String {
     var fqn = typeName
     if let moduleName = moduleName(from: context) {
@@ -83,7 +107,7 @@ extension JvmTypeDeclSyntax {
 
 
 extension JvmTypeDeclSyntax {
-  func expandJavaClassDecl(in context: some MacroExpansionContext) -> String {
+  func expandJavaClassDeclDefault(in context: some MacroExpansionContext) -> String {
     let fqn = fqn(from: context)
     return
 """
@@ -126,10 +150,9 @@ public nonisolated static var javaClass: JClass { __JClass__.shared }
 
 
 extension JvmTypeDeclSyntax {
-  func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax] = []) -> String {
+  func expandCreateNativeMethodsDefault(parents: [any TypeDeclSyntax]) throws -> [String] {
+    let fqn = fqn(with: parents)
     let exportedDecls = exportedDecls
-
-    let fqn = parents.isEmpty ? typeName : parents.map{$0.typeName}.joined(separator: ".") + "." + typeName
 
     let varNatives: [String] = exportedDecls.varDecls.flatMap { decl in
       guard let bridgings = try? decl.bridgings(typeDecl: self) else { return [String]() }
@@ -139,7 +162,7 @@ extension JvmTypeDeclSyntax {
     let funcNatives: [String] = exportedDecls.funcDecls.enumerated().compactMap {
       guard let jniSig = try? $1.jniSignature() else { return nil }
       return expandCreateNativeMethod(name: "\($1.name.text)Impl", sig: jniSig, fn: "\(fqn).\($1.name.text)_\($0)_jni")
-      }
+    }
 
     let initNatives: [String] = exportedDecls.initDecls.enumerated().compactMap {
       guard let jniSig = try? $1.jniSignature() else { return nil }
@@ -148,7 +171,13 @@ extension JvmTypeDeclSyntax {
 
     let deinitNatives = [ expandCreateNativeMethod(name: "deinit", sig: "(J)V", fn: "\(fqn).deinit_jni")]
 
-    let natives = initNatives + deinitNatives + varNatives + funcNatives
+    return initNatives + deinitNatives + varNatives + funcNatives
+  }
+
+  func expandRegisterNativesDefault(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax] = []) throws -> String {
+    let fqn = parents.isEmpty ? typeName : parents.map{$0.typeName}.joined(separator: ".") + "." + typeName
+
+    let natives = try expandCreateNativeMethods(parents: parents)
 
     let cls_expr: String
     if parents.isEmpty {
@@ -169,9 +198,9 @@ extension JvmTypeDeclSyntax {
   ]
   let _ = jni.RegisterNatives(\(typeName)_cls, \(typeName)_natives)
 
-  \(exportedDecls.typeDecls
+  \(try exportedDecls.typeDecls
     .compactMap { $0 as? (any JvmTypeDeclSyntax) }
-    .map { $0.expandRegisterNatives(in: context, parents: parents + [self]) }
+    .map { try $0.expandRegisterNatives(in: context, parents: parents + [self]) }
     .joined(separator: "\n")
   )
 """

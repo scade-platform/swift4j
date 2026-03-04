@@ -6,13 +6,21 @@ import SwiftDiagnostics
 import SwiftSyntaxExtensions
 
 
-extension FunctionSignatureSyntax {
+extension SignatureSyntax {
   func jniParams() throws -> [String] {
-    try parameterClause.parameters.map{ try $0.type.jniSignature() }
+    try parameters.map { try $0.name }
+  }
+
+  func jniTypes() throws -> [String] {
+    try parameters.map{ try $0.type.jniType() }
+  }
+
+  func jniSignatures() throws -> [String] {
+    try parameters.map{ try $0.type.jniSignature() }
   }
 
   func paramsMapping() throws -> MappingRetType {
-    let mapping = try parameterClause.parameters
+    let mapping = try parameters
       .reduce(into: (mapped: [String](), stmts: [String](), post: [MappingRetType.PostFunc]())) {
         let mapping = try $1.fromJava()
 
