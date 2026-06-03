@@ -1,5 +1,7 @@
 
+#if !canImport(jni)
 import CJNI
+#endif
 
 
 extension Array: JParameterConvertible, JConvertible, JNullInitializable, JObjectConvertible where Element: JConvertible {

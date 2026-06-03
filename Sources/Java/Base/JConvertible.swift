@@ -5,7 +5,9 @@
 //  Created by Grigory Markin on 04.06.18.
 //
 
+#if !canImport(jni)
 import CJNI
+#endif
 
 public protocol JParameterConvertible {
   func toJavaParameter()  -> JavaParameter

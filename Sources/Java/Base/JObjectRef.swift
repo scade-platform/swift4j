@@ -5,8 +5,10 @@
 //  Created by Grigory Markin on 04.02.25.
 //
 
-#if os(Linux) || os(Android)
+#if os(Linux)
   import Glibc
+#elseif os(Android)
+  import Android
 #else
   import Darwin
 #endif

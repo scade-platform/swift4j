@@ -5,7 +5,9 @@
 //  Created by Grigory Markin on 24.08.18.
 //
 
+#if !canImport(jni)
 import CJNI
+#endif
 
 
 // MARK: - JPrimitiveObjectProtocol

@@ -5,7 +5,9 @@
 //  Created by Grigory Markin on 01.06.18.
 //
 
+#if !canImport(jni)
 import CJNI
+#endif
 
 
 public final class JClass: JObject, @unchecked Sendable {

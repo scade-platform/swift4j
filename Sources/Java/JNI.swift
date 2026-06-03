@@ -5,11 +5,19 @@
 //  Created by Grigory Markin on 29.11.18.
 //
 
+#if canImport(jni)
+@_exported import jni
+public typealias JavaVMPointer = UnsafeMutablePointer<JavaVM?>
+public typealias JNIEnvPointer = UnsafeMutablePointer<JNIEnv?>
+#else
 @_exported import CJNI
+public typealias JavaVMPointer = UnsafeMutablePointer<JavaVM>
+public typealias JNIEnvPointer = UnsafeMutablePointer<JNIEnv>
+#endif
 
 
 @_cdecl("JNI_OnLoad")
-public func JNI_OnLoad(jvm: UnsafeMutablePointer<JavaVM>, reserved: UnsafeMutableRawPointer) -> JavaInt {
+public func JNI_OnLoad(jvm: JavaVMPointer, reserved: UnsafeMutableRawPointer) -> JavaInt {
   _jni = JNI(jvm)
 
   Foundation_init()
@@ -28,20 +36,24 @@ public var jni: JNI {
 
 
 public struct JNI {
-  private let jvm_ptr: UnsafeMutablePointer<JavaVM>
+  private let jvm_ptr: JavaVMPointer
 #if os(Android)
   private var classLoader: JavaObject? = nil
   private var loadClassMethod: JavaMethodID? = nil
 #endif
   
   private var jvm: JNIInvokeInterface {
+#if canImport(jni)
+    jvm_ptr.pointee!.pointee
+#else
     jvm_ptr.pointee.pointee
+#endif
   }
 
-  private var env_ptr: UnsafeMutablePointer<JNIEnv>? {
+  private var env_ptr: JNIEnvPointer? {
     var tmp: UnsafeMutableRawPointer?
     let status = jvm.GetEnv(jvm_ptr, &tmp, JavaInt(JNI_VERSION_1_6))
-    var env = tmp?.bindMemory(to: JNIEnv.self, capacity: 1)
+    var env = tmp?.bindMemory(to: JNIEnvPointer.Pointee.self, capacity: 1)
 
     switch status {
     case JNI_EDETACHED:
@@ -54,7 +66,7 @@ public struct JNI {
     return env
   }
 
-  fileprivate init(_ jvm: UnsafeMutablePointer<JavaVM>) {
+  fileprivate init(_ jvm: JavaVMPointer) {
     self.jvm_ptr = jvm
 
 #if os(Android)
@@ -71,12 +83,22 @@ public struct JNI {
 #endif
   }
 
-  private func env<T>(_ closure: (JNINativeInterface, UnsafeMutablePointer<JNIEnv>) -> T) -> T {
+  private func env<T>(_ closure: (JNINativeInterface, JNIEnvPointer) -> T) -> T {
     guard let env = env_ptr else {
       fatalError("JNI environment is not available")
     }
-    return closure(env.pointee.pointee, env)
+    return closure(envInterface(env), env)
   }
+
+#if canImport(jni)
+  private func envInterface(_ env: JNIEnvPointer) -> JNINativeInterface {
+    env.pointee!.pointee
+  }
+#else
+  private func envInterface(_ env: JNIEnvPointer) -> JNINativeInterface {
+    env.pointee.pointee
+  }
+#endif
 
 
   public func FindClass(_ cls: String) -> JavaClass? {
@@ -177,8 +199,14 @@ public struct JNI {
 
 
   public func NewStringUTF(_ str: String) -> JavaString? { env { $0.NewStringUTF($1, str) } }
+#if canImport(jni)
+  // NDK GetStringUTFChars lacks _Nonnull on return type, so it's imported as optional.
+  public func GetStringUTFChars(_ str: JavaString) -> UnsafePointer<CChar> { env { $0.GetStringUTFChars($1, str, nil)! } }
+  public func GetStringUTFChars(_ str: JavaString, _ isCopy: inout Bool) -> UnsafePointer<CChar> { env { $0.GetStringUTFChars($1, str, &isCopy)! } }
+#else
   public func GetStringUTFChars(_ str: JavaString) -> UnsafePointer<CChar> { env { $0.GetStringUTFChars($1, str, nil) } }
   public func GetStringUTFChars(_ str: JavaString, _ isCopy: inout Bool) -> UnsafePointer<CChar> { env { $0.GetStringUTFChars($1, str, &isCopy) } }
+#endif
   public func ReleaseStringUTFChars( _ str: JavaString, _ chars: UnsafePointer<CChar>) { env { $0.ReleaseStringUTFChars($1, str, chars) } }
   public func GetStringUTFLength( _ str: JavaString) -> Int { Int(env { $0.GetStringUTFLength($1, str) }) }
 
