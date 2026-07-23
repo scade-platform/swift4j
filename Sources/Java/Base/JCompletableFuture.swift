@@ -29,7 +29,7 @@ struct JCompletableFuture {
 
 public func execWithFuture<T: JObjectConvertible & Sendable> (_ cl: @Sendable @escaping () async throws -> T) -> JavaObject {
   return execWithFuture {
-    return await try cl().toJavaObject()
+    return try await cl().toJavaObject()
   }
 }
 
@@ -41,20 +41,26 @@ public func execWithFuture(_ cl: @Sendable @escaping () async throws -> JavaObje
   let future = JCompletableFuture(javaObject)
 
   Task.detached {
-    let res: Result<JavaObject?, Error>
+    let res: Result<JObject?, Error>
 
     do {
-      res = .success(try await cl())
+      if let ptr = try await cl() {
+        res = .success(JObject(ptr))
+      } else {
+        res = .success(nil)
+      }
+
     } catch {
       res = .failure(error)
     }
 
     await MainActor.run {
       switch res {
-        case .success(let val): _ = future.complete(val)
+        case .success(let val): _ = future.complete(val?.ptr)
         case .failure(let err): _ = future.complete(err)
       }
     }
+
   }
 
   return javaObject
@@ -78,7 +84,7 @@ public func execWithFuture(_ cl: @Sendable @escaping () async throws -> Void) ->
 
     await MainActor.run {
       switch res {
-        case .success(let val): _ = future.complete()
+        case .success(_): _ = future.complete()
         case .failure(let err): _ = future.complete(err)
       }
     }
@@ -89,3 +95,4 @@ public func execWithFuture(_ cl: @Sendable @escaping () async throws -> Void) ->
 
 
 private let JCompletableFuture__class = JClass(fqn: "java/util/concurrent/CompletableFuture")
+
