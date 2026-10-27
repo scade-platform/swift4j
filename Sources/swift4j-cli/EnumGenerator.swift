@@ -3,34 +3,82 @@ import SwiftParser
 
 import SwiftSyntaxExtensions
 
-class EnumGenerator: TypeGenerator<EnumDeclSyntax> { }
+class EnumGenerator: TypeGenerator<EnumDeclSyntax> {
+  private var varGens: [VarGenerator] = []
+  private var methodGens: [MethodGenerator] = []
+
+  override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
+    if node.isExported && node.parentDecl?.isExported ?? true {
+      varGens.append(VarGenerator(node, className: name))
+    }
+    return .skipChildren
+  }
+
+  override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
+    if node.isExported && node.parentDecl?.isExported ?? true {
+      methodGens.append(MethodGenerator(node, className: name))
+    }
+    return .skipChildren
+  }
+}
 
 
 extension EnumGenerator: TypeGeneratorProtocol {
   var isRefType: Bool { return false }
 
   func generate(with ctx: inout ProxyGenerator.Context) -> TypeProxy {
-    return typeDecl.withAssociatedValues
-      ? generateSealedClass(with: &ctx)
-      : generateEnum(with: &ctx)
+    if typeDecl.bridgedAsClass {
+      return ctx.with(language: .kotlin) { kotlinContext in
+        generateSealedClass(with: &kotlinContext)
+      }
+    }
+    return generateEnum(with: &ctx)
   }
 
   func generateSealedClass(with ctx: inout ProxyGenerator.Context) -> TypeProxy {
+    let instanceVars = varGens.filter { !$0.isStatic }.map { $0.generate(with: &ctx) }.joined(separator: "\n\n")
+    let staticVars = varGens.filter { $0.isStatic }.map { $0.generate(with: &ctx) }.joined(separator: "\n\n")
+    let instanceMethods = methodGens.filter { !$0.isStatic }.map { $0.generate(with: &ctx) }.joined(separator: "\n\n")
+    let staticMethods = methodGens.filter { $0.isStatic }.map { $0.generate(with: &ctx) }.joined(separator: "\n\n")
+    let nestedTypes = nestedTypeGens.compactMap { generator -> String? in
+      let proxy = generator.generate(with: &ctx)
+      return proxy is KotlinTypeProxy ? proxy.source : nil
+    }.joined(separator: "\n\n")
+
     return KotlinTypeProxy(name: name, source:
 """
 sealed class \(name)(protected val ptr: SwiftPtr) {
-  private companion object {
-      val class_initialized: Boolean
-      init {          
-          \(name)_class_init()          
-          class_initialized = true
+
+  private fun _ptr(): Long = ptr.get()
+
+\(instanceVars)
+
+\(instanceMethods)
+
+\(typeDecl.caseDecls().map{$0.generateCaseType(with: &ctx, in: typeDecl.typeName)}.joined(separator: "\n\n"))
+
+\(nestedTypes)
+
+  companion object {
+      private var classInitialized = false
+
+      init {
+          class_init()
+      }
+
+      @JvmStatic
+      private fun class_init() {
+          if (!classInitialized) {
+              \(name)_class_init()
+              classInitialized = true
+          }
       }
 
       @JvmStatic      
-      external fun \(name)_class_init()
+      private external fun \(name)_class_init()
 
       @JvmStatic
-      external fun deinit(ptr: Long)
+      private external fun deinit(ptr: Long)
       
 \(
   typeDecl.caseDecls().map{
@@ -45,26 +93,35 @@ sealed class \(name)(protected val ptr: SwiftPtr) {
     }
   }.joined(separator: "\n\n")
 )
-  }
 
-  private fun ptr(): Long {
-      return ptr.get()
-  }
+\(staticVars)
 
-\(typeDecl.caseDecls().map{$0.generateCaseType(with: &ctx, in: typeDecl.typeName)}.joined(separator: "\n\n"))
+\(staticMethods)
+  }
 }
 """
     )
   }
 
   func generateEnum(with ctx: inout ProxyGenerator.Context) -> TypeProxy {
-    return JavaTypeProxy(name: name, source:
+    switch ctx.settings.language {
+    case .java:
+      return JavaTypeProxy(name: name, source:
 """
 public enum \(name) {
   \(typeDecl.cases().joined(separator: ", "));
 }
 """
-    )
+      )
+    case .kotlin:
+      return KotlinTypeProxy(name: name, source:
+"""
+enum class \(name) {
+  \(typeDecl.cases().joined(separator: ", "))
+}
+"""
+      )
+    }
   }
 }
 

@@ -19,11 +19,11 @@ extension EnumDeclSyntax: JvmValueTypeDeclSyntax {
 
   func expandJavaClassDecl(in context: some MacroExpansionContext) -> String {
     let caseJClassDecls: String
-    if withAssociatedValues {
-      let fqn = fqn(from: context)
+    if bridgedAsClass {
+      let javaFqn = jfqn(from: context)
       caseJClassDecls = caseDecls().map {
         let caseName = $0.name.text
-        let caseClass = fqn + "$" + caseName
+        let caseClass = javaFqn + "$" + caseName
         return
 """
 private static let \(caseName)_javaClass: JClass = {
@@ -47,7 +47,7 @@ private static let \(caseName)_javaClass: JClass = {
   }
 
   func expandJavaObjectDecls(in context: some MacroExpansionContext) throws -> String {
-    if withAssociatedValues {
+    if bridgedAsClass {
       return try expandJavaObjectDeclsAsClass(in: context)
     } else {
       return try expandJavaObjectDeclsAsEnum(in: context)
@@ -55,7 +55,7 @@ private static let \(caseName)_javaClass: JClass = {
   }
 
   func expandCtorDecls(in context: some MacroExpansionContext) throws -> String {
-    if withAssociatedValues {
+    if bridgedAsClass {
       let caseCtors = try caseDecls().map {
         try $0.makeBridgingDecls(typeDecl: self)
       }.joined(separator: "\n")
@@ -73,10 +73,10 @@ private static let \(caseName)_javaClass: JClass = {
   }
 
   func expandToJavaObject(in context: some MacroExpansionContext) -> String {
-    let fqn = fqn(from: context)
+    let javaFqn = jfqn(from: context)
     let toJavaCases = caseDecls().map {
       let caseName = $0.name.text
-      let caseFqn = fqn + "$" + caseName
+      let caseFqn = javaFqn + "$" + caseName
       let caseJClass = "Self.\(caseName)_javaClass"
 
       if $0.parameters.isEmpty {
@@ -105,7 +105,7 @@ switch self {
   }
 
   func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax]) throws -> String {
-    guard withAssociatedValues else { return "" }
+    guard bridgedAsClass else { return "" }
     return try expandRegisterNativesDefault(in: context, parents: parents)
   }
 
@@ -136,7 +136,7 @@ switch self {
   func expandJavaObjectDeclsAsEnum(in context: some MacroExpansionContext) throws -> String {
     let toJavaCases = cases().map{
 """
-case .\($0): return Self.javaClass.getStatic(field: "\($0)", sig: "L\(fqn(from: context));")?.ptr
+case .\($0): return Self.javaClass.getStatic(field: "\($0)", sig: "L\(jfqn(from: context));")?.ptr
 """
     }.joined(separator: "\n")
 

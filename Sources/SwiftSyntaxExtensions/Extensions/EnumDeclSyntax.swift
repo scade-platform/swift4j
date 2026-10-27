@@ -1,9 +1,8 @@
 import SwiftSyntax
 
 public extension EnumDeclSyntax {
-
-  var withAssociatedValues: Bool {
-    caseDecls().contains { $0.parameterClause != nil }
+  var bridgedAsClass: Bool {
+    caseDecls().contains { $0.parameterClause != nil } || !exportedDecls.isEmpty
   }
 
   func caseDecls() -> [EnumCaseElementSyntax] {

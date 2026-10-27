@@ -27,6 +27,19 @@ struct JvmMacrosWarnDiagnostic: DiagnosticMessage {
 
 extension MacroExpansionContext {
 
+  var enclosingFqn: String? {
+    let res: [String]? = lexicalContext.reduce([]) {
+      guard let res = $0,
+            let decl = $1.asProtocol(DeclSyntaxProtocol.self) as? (any JvmTypeDeclSyntax) else {
+        return nil
+      }
+
+      return [decl.typeName] + res
+    }
+
+    return res?.joined(separator: ".")
+  }
+
   var enclosingDeclType: (any JvmTypeDeclSyntax)? {
     lexicalContext.first?.asProtocol(DeclSyntaxProtocol.self) as? (any JvmTypeDeclSyntax)
   }
@@ -55,7 +68,7 @@ extension MacroExpansionContext {
 
   func disableJvmMappingFixIt(at node: some SyntaxProtocol) -> [FixIt] {
     var newNode: Syntax? = nil
-    
+
     var nonjvmAttr: AttributeListSyntax.Element = .attribute("@nonjvm")
     nonjvmAttr.trailingTrivia = .newline
 
@@ -73,7 +86,7 @@ extension MacroExpansionContext {
     guard let newNode = newNode else {
       return []
     }
-    
+
     return [FixIt(message: DisableJvmMappingFixItMessage(),
                   changes: [
                     FixIt.Change.replace(oldNode: Syntax(node),

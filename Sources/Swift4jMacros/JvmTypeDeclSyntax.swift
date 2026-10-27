@@ -30,7 +30,7 @@ extension JvmTypeDeclSyntax {
   }
 
   func expandJavaClassDecl(in context: some MacroExpansionContext) -> String {
-    return try expandJavaClassDeclDefault(in: context)
+    return expandJavaClassDeclDefault(in: context)
   }
 
   func expandRegisterNatives(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax]) throws -> String {
@@ -77,8 +77,6 @@ public func \(typeName)_class_init(_ env: UnsafeMutablePointer<JNIEnv>, _ cls: J
 
     return ["\(raw: syntax)"]
   }
-
-
 }
 
 
@@ -89,10 +87,21 @@ extension JvmTypeDeclSyntax {
 
   func fqn(from context: some MacroExpansionContext) -> String {
     var fqn = typeName
-    if let moduleName = moduleName(from: context) {
-      fqn = "\(moduleName)/\(fqn)"
+
+    if let enclosingFqn = context.enclosingFqn, !enclosingFqn.isEmpty {
+      fqn = "\(enclosingFqn).\(fqn)"
     }
+
     return fqn
+  }
+
+  func jfqn(from context: some MacroExpansionContext, parents: [any TypeDeclSyntax]? = nil) -> String {
+    let swiftName = parents.map { fqn(with: $0) } ?? fqn(from: context)
+    let javaName = swiftName.replacingOccurrences(of: ".", with: "$")
+    if let moduleName = moduleName(from: context) {
+      return "\(moduleName)/\(javaName)"
+    }
+    return javaName
   }
 
   func moduleName(from context: some MacroExpansionContext) -> String? {
@@ -108,11 +117,11 @@ extension JvmTypeDeclSyntax {
 
 extension JvmTypeDeclSyntax {
   func expandJavaClassDeclDefault(in context: some MacroExpansionContext) -> String {
-    let fqn = fqn(from: context)
+    let javaFqn = jfqn(from: context)
     return
 """
 private enum __JClass__ {
-  static let name = "\(fqn)"
+  static let name = "\(javaFqn)"
   static let shared = {
     guard let cls = JClass(fqn: javaName) else {
       fatalError("Could not find \\(javaName) class")
@@ -175,19 +184,14 @@ extension JvmTypeDeclSyntax {
   }
 
   func expandRegisterNativesDefault(in context: some MacroExpansionContext, parents: [any TypeDeclSyntax] = []) throws -> String {
-    let fqn = parents.isEmpty ? typeName : parents.map{$0.typeName}.joined(separator: ".") + "." + typeName
-
     let natives = try expandCreateNativeMethods(parents: parents)
 
     let cls_expr: String
     if parents.isEmpty {
       cls_expr = "cls"
     } else {
-      var jfqn = fqn.replacingOccurrences(of: ".", with: "$")
-      if let moduleName = moduleName(from: context) {
-        jfqn = moduleName + "/" + jfqn
-      }
-      cls_expr = "jni.FindClass(\"\(jfqn)\")"
+      let javaFqn = jfqn(from: context, parents: parents)
+      cls_expr = "jni.FindClass(\"\(javaFqn)\")"
     }
 
     let registerNatives =

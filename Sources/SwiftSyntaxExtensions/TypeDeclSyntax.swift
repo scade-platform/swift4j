@@ -13,11 +13,22 @@ public extension TypeDeclSyntax {
 }
 
 
+public struct ExportedDecls {
+  public var initDecls: [InitializerDeclSyntax]
+  public var varDecls: [VariableDeclSyntax]
+  public var funcDecls: [FunctionDeclSyntax]
+  public var typeDecls: [any TypeDeclSyntax]
+
+  var isEmpty: Bool {
+    initDecls.isEmpty &&
+    varDecls.isEmpty &&
+    funcDecls.isEmpty &&
+    typeDecls.isEmpty
+  }
+}
+
+
 public extension TypeDeclSyntax {
-  typealias ExportedDecls = (initDecls: [InitializerDeclSyntax],
-                             varDecls: [VariableDeclSyntax],
-                             funcDecls: [FunctionDeclSyntax],
-                             typeDecls: [any TypeDeclSyntax])
 
   var typeName: String { name.text }
 
@@ -50,7 +61,10 @@ public extension TypeDeclSyntax {
   }
 
   var exportedDecls: ExportedDecls {
-    var decls: ExportedDecls = (exportedInitializers, [], [], [])
+    var decls = ExportedDecls(initDecls: exportedInitializers,
+                              varDecls: [],
+                              funcDecls: [],
+                              typeDecls: [])
 
     guard isExported else { return decls }
 
