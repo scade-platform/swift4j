@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:swift4j}",
+      "name": "Debug swift4j-cli",
+      "target": "swift4j-cli",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug swift4j-cli"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:swift4j}",
+      "name": "Release swift4j-cli",
+      "target": "swift4j-cli",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release swift4j-cli"
+    }
+  ]
+}
