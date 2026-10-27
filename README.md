@@ -1,5 +1,7 @@
 # Swift4j Toolkit
 
+See the [changelog](CHANGELOG.md) for release history and upcoming changes.
+
 The **swift4j** toolkit is a set of libraries and tools making possible a seamless interoperability between Swift and Java/Kotlin. Besides the **swift4j** Swift package presented in this repository there are also a set of Gradle plugins and the Swift Toolchain for Android allowing smooth integration of the Swift libraries into the desktop and mobile applications written in Java/Kotlin.       
 
 ## Quick Example
