@@ -1,22 +1,21 @@
 # Swift4j
 
-Swift4j exposes Swift libraries to Java and Kotlin through JNI. Annotate Swift
-types with `@jvm`, build a shared library, and call it through generated JVM
-classes. Application logic stays in Swift; Java and Kotlin callers use typed
-constructors, properties, methods, callbacks, and asynchronous results.
+Swift4j makes Swift libraries callable from Java and Kotlin. Annotate Swift types
+with `@jvm` and use generated classes to access their methods, properties, and
+asynchronous results from JVM and Android applications.
 
-The toolkit includes Swift macros, a JNI runtime, and a bridge generator.
-[SwiftPM Gradle plugins](https://github.com/scade-platform/spm-gradle-plugin)
-integrate generation, native compilation, and packaging into JVM and Android
-builds.
+Share application logic, networking, and data models in Swift while keeping the
+UI native to each platform. Swift4j provides the macros, JNI runtime, and bridge
+generator; the [SwiftPM Gradle plugins](https://github.com/scade-platform/spm-gradle-plugin)
+handle native builds and packaging.
 
-This README describes the current source. Full Kotlin generation and enum members
-and nested types are **unreleased**; see the [changelog](CHANGELOG.md) for version
-history and upgrade notes.
+[Documentation](https://swift-android.com/docs/swift4j/overview/) ·
+[Examples](https://github.com/scade-platform/swift4j-examples) ·
+[Changelog](CHANGELOG.md)
 
-## A first example
+## Call Swift from Kotlin
 
-Swift arrays and closures can be used directly across the boundary:
+Arrays and closures cross the boundary through typed, generated APIs:
 
 ```swift
 import Swift4j
@@ -29,254 +28,54 @@ public class ArrayTools {
 }
 ```
 
-After building the library and generating its bridges:
-
 ```kotlin
-import SharedKit.ArrayTools
-
-fun main() {
-    System.loadLibrary("SharedKit")
-
-    val result = ArrayTools.mapReversed(longArrayOf(1, 2, 3)) { it + 1 }
-    println(result.joinToString()) // 4, 3, 2
-}
+val result = ArrayTools.mapReversed(longArrayOf(1, 2, 3)) { it + 1 }
+println(result.joinToString()) // 4, 3, 2
 ```
 
-`SharedKit` is the Swift target and dynamic library product used in the setup
-below. Swift `Int` maps to JVM `long` / Kotlin `Long`.
+The following examples show calls through generated bridges, with imports and
+library initialization omitted. Complete projects are in
+[swift4j-examples](https://github.com/scade-platform/swift4j-examples).
 
-## Supported features
+## Async results and errors
 
-| Swift | JVM representation or behavior |
-| --- | --- |
-| Classes and structs | Generated classes with constructors and member access |
-| Stored and computed properties | Java accessors or Kotlin properties; writable when the Swift setter is exposed |
-| Instance and static methods | Typed methods, including supported overloads |
-| `throws` methods and initializers | JVM exceptions |
-| `async` methods | `CompletableFuture<T>`, usable with Kotlin coroutine `await()` |
-| Enums without associated values or exported members | Java enums, or Kotlin enums in Kotlin generation mode |
-| Enums with associated values | Kotlin sealed classes with typed case payloads |
-| Enum properties, methods, and nested types | Kotlin sealed classes; unreleased |
-| Nested types and qualified member types | Nested JVM classes; nested enum declarations and qualified type mapping are unreleased |
-| `@Observable` classes | Observation-tracking accessors; optional Android ViewModels with `StateFlow` properties |
-| Optionals | Nullable references and boxed primitive values |
-| `Bool`, signed integers, `Float`, `Double`, and `String` | Corresponding JVM values; Swift `Int` is 64-bit |
-| Arrays and closures | JVM arrays and Java functional interfaces callable with Kotlin lambdas |
-| Mutating struct methods and `inout` parameters | Updates to the Swift value held by the bridge |
-| Foundation `Date` | `java.util.Date` |
-| Swift `Result` | `io.scade.swift4j.Result` with success and error values |
-
-Exported signatures must use supported types. Generic arguments in mapped
-signatures are supported; exporting arbitrary generic Swift declarations,
-protocols, or extension members is not generally supported. Overloads must remain
-distinct after JVM type mapping: Swift argument labels do not distinguish JVM
-methods.
-
-Structs are held behind JVM wrappers, rather than generated as Kotlin data
-classes. Property writes and mutating methods update the wrapped Swift value.
-
-## Getting started
-
-### Requirements
-
-- A Swift 6 toolchain for the current SwiftSyntax-based macros.
-- A JDK and a JVM build configured to compile the generated Java and, when needed,
-  Kotlin sources. The generator defaults to Java 11 source compatibility.
-- For Android, a matching Swift SDK/toolchain, Android SDK, and NDK. Swift4j 1.5.0
-  added standalone Swift SDK for Android compatibility. Use the
-  [Gradle plugin documentation](https://github.com/scade-platform/spm-gradle-plugin#readme)
-  for the toolchain and packaging configuration supported by your plugin version.
-- AndroidX Lifecycle and Kotlin coroutines for generated Android ViewModels;
-  Compose is needed only if your UI uses it.
-
-`--java-version` controls generated source compatibility. It does not backport
-runtime APIs such as `CompletableFuture`; configure Android API levels or
-applicable desugaring separately.
-
-### Define a Swift library
-
-Create a dynamic library product and add the `Swift4j` dependency to each target
-that exports types:
+Swift `async` methods return `CompletableFuture` values. Kotlin callers can
+`await()` the result inside a coroutine without blocking a thread; Java callers
+use the standard future API.
 
 ```swift
-// swift-tools-version: 6.0
-import PackageDescription
-
-let package = Package(
-    name: "SharedKit",
-    products: [
-        .library(name: "SharedKit", type: .dynamic, targets: ["SharedKit"])
-    ],
-    dependencies: [
-        .package(url: "https://github.com/scade-platform/swift4j.git", from: "1.5.0")
-    ],
-    targets: [
-        .target(
-            name: "SharedKit",
-            dependencies: [.product(name: "Swift4j", package: "swift4j")]
-        )
-    ]
-)
-```
-
-This dependency selects published releases. To try unreleased features before
-publication, use a local checkout with `.package(path: "../swift4j")` instead.
-
-Add `import Swift4j` and `@jvm` to the classes, structs, and enums you want to
-expose. Eligible members are exported automatically, including internal members;
-use `private` or `@nonjvm` to exclude implementation details. Each nested type
-must also be annotated, and its enclosing types must be exposed.
-
-```swift
-@jvm
-public class LibraryService {
-    public func title() -> String { "Shared library" }
-
-    @nonjvm
-    public func rebuildInternalIndex() { /* Swift-only implementation */ }
-}
-```
-
-### Integrate with Gradle
-
-Apply the plugin for your platform to the module's `build.gradle.kts`, alongside
-your Java/Kotlin or Android plugins. Replace `<plugin-version>` with the version
-you use for your build.
-
-For a JVM application:
-
-```kotlin
-plugins {
-    id("io.scade.gradle.plugins.swiftpm") version "<plugin-version>"
-}
-```
-
-For an Android application:
-
-```kotlin
-plugins {
-    id("io.scade.gradle.plugins.android.swiftpm") version "<plugin-version>"
-}
-```
-
-Both use the same basic configuration:
-
-```kotlin
-swiftpm {
-    path = file("../SharedKit") // Directory containing Package.swift
-    product = "SharedKit"      // Dynamic library product
-}
-```
-
-The plugins build the native library and integrate generated bridge sources into
-the application. Pin the plugin version for reproducible builds. See the
-[example projects](https://github.com/scade-platform/swift4j-examples) for complete
-Gradle configurations, dependencies, and native library setup.
-
-Load the library once, before constructing or accessing exported types:
-
-```kotlin
-System.loadLibrary("SharedKit")
-```
-
-The command plugin derives the JVM package from the Swift target name, replacing
-hyphens with underscores. `System.loadLibrary` uses the native library's base
-name, without a `lib` prefix or platform extension.
-
-## Async/await
-
-A Swift `async` method returns a JVM `CompletableFuture`. The call starts Swift
-asynchronous work and returns the future; Kotlin can suspend until the Swift
-result is available without blocking its calling thread.
-
-This example preserves the delayed-result behavior in the
-[async sample](https://github.com/scade-platform/swift4j-examples/blob/main/Packages/swift4j-examples/Sources/swift4j-examples/Async.swift):
-
-```swift
-import Swift4j
-
 @jvm
 public struct AsyncGreeting {
     public func message() async throws -> String {
         try await Task.sleep(nanoseconds: 2_000_000_000)
-        return "Swift greets Kotlin from an async function"
+        return "Swift greets Kotlin"
     }
 }
 ```
 
-From Kotlin, call it inside a coroutine:
-
 ```kotlin
-import SharedKit.AsyncGreeting
 import kotlinx.coroutines.future.await
 
-suspend fun printGreeting() {
-    val message = AsyncGreeting().message().await()
-    println(message)
+// Inside a coroutine:
+try {
+    println(AsyncGreeting().message().await())
+} catch (error: Exception) {
+    println(error.message)
 }
 ```
 
-Use the JVM `kotlinx-coroutines-core` dependency for
-[`kotlinx.coroutines.future.await`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.future/await.html).
-Java callers can use the same future with `thenAccept`, `thenCompose`, and other
-`CompletableFuture` operations.
-
-Successful Swift results complete the future; a method returning no value yields
-`CompletableFuture<Void>`. Swift errors complete it exceptionally, and Kotlin
-`await()` throws the exception. The exceptional-completion fix is unreleased.
-
-Cancelling a JVM future does not currently cancel its underlying Swift task.
-`@MainActor` annotations also do not automatically dispatch synchronous calls to
-the main thread: call such APIs from the appropriate UI thread.
-
-## Throwing methods and initializers
-
-Swift errors from synchronous `throws` methods and initializers become JVM
-exceptions. For a useful message, errors can implement `LocalizedError`:
-
-```swift
-import Foundation
-import Swift4j
-
-private enum StoreError: LocalizedError {
-    case unavailable
-
-    var errorDescription: String? { "The store is unavailable" }
-}
-
-@jvm
-public struct Store {
-    public static func open() throws {
-        throw StoreError.unavailable
-    }
-}
-```
-
-```kotlin
-import SharedKit.Store
-
-fun openStore() {
-    try {
-        Store.open()
-    } catch (error: Exception) {
-        println(error.message)
-    }
-}
-```
-
-For `async throws`, put the `await()` call inside `try`/`catch` in the same way.
-Swift error cases are represented by the runtime's `SwiftError` exception;
-export an enum or a `Result` value when callers need typed domain outcomes.
+Swift `throws` methods and initializers propagate errors as JVM exceptions.
+For asynchronous calls, errors complete the future exceptionally and are thrown
+by `await()`. Cancelling a JVM future does not currently cancel the Swift task.
 
 ## Swift Observation on Android
 
-A Swift `@Observable` class can serve both Swift UI code and an Android UI.
-Swift4j generates observation-tracking accessors, and its Android ViewModel
-generator exposes observable properties as Kotlin `StateFlow` values.
+Expose a Swift observable model as an Android ViewModel with `StateFlow`
+properties. Changes made in Swift update the state consumed by the Android UI,
+including computed properties.
 
 ```swift
 import Observation
-import Swift4j
 
 @jvm
 @Observable
@@ -288,188 +87,93 @@ public final class Counter {
 }
 ```
 
-Generate with `--generate-android-view-models` (the Android Gradle plugin requests
-this automatically). The output includes `CounterViewModel`, a factory, and a
-`viewModel` extension in `SharedKit.viewmodel`. The wrapper tracks Swift reads,
-re-registers observation after changes, and updates its flows on the main
-dispatcher. Computed properties can be observed too; use `@ObservationIgnored` to
-exclude a property from tracking.
-
-For example, create the wrapper through an Activity's ViewModel store after the
-native library has been loaded:
+In Compose, using the generated `CounterViewModel`:
 
 ```kotlin
-import SharedKit.Counter
-import SharedKit.viewmodel.CounterViewModel
-import SharedKit.viewmodel.CounterViewModelFactory
-import androidx.activity.viewModels
-
-// Members of your ComponentActivity:
-private val counter: CounterViewModel by viewModels {
-    CounterViewModelFactory(Counter())
+val title by viewModel.title.collectAsState()
+Text(title)
+Button(onClick = { viewModel.model.increment() }) {
+    Text("Increment")
 }
 ```
 
-Then consume its state in Compose:
+The same Swift model can be observed by SwiftUI. Observation-tracking accessors
+are also available for custom JVM integrations.
 
-```kotlin
-import SharedKit.viewmodel.CounterViewModel
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+## Enums with associated values
 
-@Composable
-fun CounterContent(viewModel: CounterViewModel) {
-    val title by viewModel.title.collectAsState()
-    Text(title)
-    Button(onClick = { viewModel.model.increment() }) {
-        Text("Increment")
-    }
-}
-```
-
-Changes made through Swift methods also update the observed state. Generated
-`updateCount(value)` methods write mutable properties back to Swift. For custom
-integration without Android ViewModels, call accessors such as
-`getCountWithObservationTracking(onChange)` directly; Swift observation callbacks
-are one-shot and must be registered again for subsequent changes.
-
-## Enums and Kotlin generation
-
-Enums with associated values become sealed Kotlin classes. Cases retain their
-Swift names, and associated values become typed Kotlin properties:
+Swift enums with payloads become Kotlin sealed classes. Case names and named
+associated values are preserved:
 
 ```swift
-import Swift4j
-
 @jvm
 public enum RequestState {
     case success(value: String)
     case error(code: Int, message: String)
     case loading
 }
-
-@jvm
-public struct RequestService {
-    public static func load() -> RequestState {
-        .error(code: 404, message: "Not found")
-    }
-}
 ```
 
-```kotlin
-import SharedKit.RequestService
-import SharedKit.RequestState
+For a `RequestState` returned by Swift:
 
-fun describeRequest(): String = when (val state = RequestService.load()) {
-    is RequestState.success -> "Success: ${state.value}"
+```kotlin
+val description = when (state) {
+    is RequestState.success -> state.value
     is RequestState.error -> "Error ${state.code}: ${state.message}"
     RequestState.loading -> "Loading"
 }
 ```
 
-Plain enums generate Java enums by default. Enums with associated values generate
-Kotlin sources even in the default Java mode, so the consuming build needs Kotlin
-compilation.
+Enums can also expose properties, methods, and nested types—for example, an
+`Appearance` enum returning an `Appearance.Colors` struct.
 
-**Unreleased:** `--kotlin` generates class and struct bridges as Kotlin sources as
-well. It preserves the same JNI runtime and exposes members as Kotlin properties
-and functions. Enums can also export properties, methods, and nested types; those
-enums use sealed classes even when their cases have no payload.
+## Supported features
 
-For example, a theme can return a nested value type:
-
-```swift
-import Swift4j
-
-@jvm
-public enum Appearance {
-    case light
-    case dark
-
-    @jvm
-    public struct Colors {
-        public var text: String
-        public var card: String
-    }
-
-    public var colors: Appearance.Colors {
-        switch self {
-        case .light: return .init(text: "#111111", card: "#F2F2F5")
-        case .dark: return .init(text: "#F2F2F5", card: "#1F2937")
-        }
-    }
-}
-```
-
-```kotlin
-import SharedKit.Appearance
-
-fun printTheme() {
-    val colors = Appearance.dark.colors
-    println(colors.card) // #1F2937
-}
-```
-
-## Generate bridges manually
-
-Build the generator from a swift4j checkout:
-
-```sh
-swift build --product swift4j-cli
-```
-
-Run it on the Swift files you want to expose. Create the output directory first:
-
-```sh
-mkdir -p generated
-swift run swift4j-cli --package SharedKit --java-version 11 \
-    -o generated path/to/SharedKit/*.swift
-```
-
-Or run the command plugin from the package that depends on Swift4j:
-
-```sh
-swift package plugin generate-java-bridging --product SharedKit \
-    --java-version 11 --copy-java-sources
-```
-
-| Option | Purpose |
+| Swift API | Java / Kotlin API |
 | --- | --- |
-| `--package <name>` | Required JVM package name for the CLI; derived per target by the command plugin |
-| `-o`, `--outdir <directory>` | CLI output directory; omitted to print sources to standard output |
-| `--java-version <version>` | Java source compatibility, default `11` |
-| `--kotlin` | Generate Kotlin bridges; unreleased |
-| `--generate-android-view-models` | Also generate Android ViewModel wrappers for observable classes |
-| `--product <name>` | Select a product when using the command plugin |
-| `--copy-java-sources` | Copy Java runtime source resources when using the command plugin |
+| Classes, structs, and nested types | Generated classes and constructors |
+| Stored and computed properties | Java accessors or Kotlin properties |
+| Instance and static methods | Typed methods, including supported overloads |
+| `async` / `async throws` | `CompletableFuture`, usable with Kotlin `await()` |
+| Throwing methods and initializers | JVM exceptions |
+| Plain enums | Java or Kotlin enums |
+| Enums with payloads or exported members | Kotlin sealed classes |
+| `@Observable` classes | Observation accessors and Android ViewModels with `StateFlow` |
+| Primitives, strings, optionals, and arrays | Corresponding JVM values and nullable types |
+| Closures | Functional interfaces usable with Kotlin lambdas |
+| Mutating methods and `inout` parameters | Updates to wrapped Swift values |
+| Foundation `Date` and Swift `Result` | JVM date and result types |
 
-The CLI reads source files; the command plugin visits source targets of the
-selected product. Its default output is under
-`.build/plugins/generate-java-bridging/outputs/<product>/main/java` (the exact
-build location depends on SwiftPM).
+Java is the default output language. `--kotlin` selects Kotlin generation for
+classes and structs as well; sealed enum bridges use Kotlin in either mode.
+Use `@nonjvm` to exclude members from an exported type.
 
-Add the generated sources to your JVM build. When using the CLI alone, also
-include the runtime Java sources from `Sources/Swift4j/java`. Nullable Java
-signatures use JetBrains annotations. Compile and package the Swift shared
-library and its native dependencies for the destination platform; generation
-alone does not build the library.
+Exported signatures must use supported types. Arbitrary generic declarations,
+protocol exports, and extension members are not generally supported. Overloads
+must remain distinct after JVM type mapping; Swift argument labels do not
+distinguish JVM methods. Swift `Int` maps to JVM `long` / Kotlin `Long`.
 
-## Examples
+This README covers Swift4j 1.6.0. See the [changelog](CHANGELOG.md) for release
+history and upgrade notes.
 
-[swift4j-examples](https://github.com/scade-platform/swift4j-examples) contains
-complete JVM and Android projects:
+## Documentation and examples
 
-- **SwiftExamples:** callbacks, arrays, nested classes, enums, properties,
-  exceptions, observation, Foundation values, and async results.
-- **ObservationDemo:** a Swift observable model connected to a Compose UI through
-  a generated Android ViewModel.
-- **WeatherApp:** a Swift networking service used from Android, with Foundation,
-  Alamofire, and SwiftyJSON variants.
+Swift4j uses Swift 6 macros and builds Swift code as a shared library for the
+target platform. It can be integrated through Gradle or used with its standalone
+CLI and Swift package command plugin.
+
+See the [Swift4j documentation](https://swift-android.com/docs/swift4j/overview/) for installation,
+project configuration, and integration guides.
+
+The [examples repository](https://github.com/scade-platform/swift4j-examples)
+includes JVM and Android applications covering:
+
+- **SwiftExamples:** callbacks, arrays, nested types, enums, properties,
+  exceptions, observation, and async results.
+- **ObservationDemo:** a Swift observable model connected to a Compose UI.
+- **WeatherApp:** Swift networking with Foundation, Alamofire, and SwiftyJSON.
 - **SimpleDBApp:** shared SQLite logic using GRDB.
-- **SalesforceDemo:** a larger asynchronous service integration.
+- **SalesforceDemo:** asynchronous service integration.
 
 ## License and contact
 

@@ -6,7 +6,7 @@ Git tags and commit history, cross-checked against
 Dates are those of the tagged source commits; early tag creation dates can differ.
 Features are grouped by the first tagged version containing them.
 
-## Unreleased
+## 1.6.0 — 2026-10-28
 
 ### Added
 
