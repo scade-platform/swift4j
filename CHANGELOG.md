@@ -26,6 +26,8 @@ Features are grouped by the first tagged version containing them.
 - JVM class names and native registration for nested types use the enclosing type
   names and JVM `$` separators.
 - Swift concurrency warnings in the `CompletableFuture` wrapper.
+- Corrected the JNI signature for exceptional completion of async calls, so
+  errors from Swift `async throws` methods complete the future exceptionally.
 
 ### Upgrade notes
 

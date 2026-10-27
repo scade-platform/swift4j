@@ -12,7 +12,7 @@ struct JCompletableFuture {
 
   func complete<T: Error>(_ error: T) -> Bool {
     return jobj.call(method: "completeExceptionally",
-                     sig: "Ljava/lang/Throwable;",
+                     sig: "(Ljava/lang/Throwable;)Z",
                      [JavaParameter(object: error.toJavaObject())])
   }
 
