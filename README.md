@@ -173,23 +173,25 @@ It is also possible to generate Java bridgings without the SwiftPM Gradle plugin
 To generate bridgings using the CLI tool, execute the following command:
 
 ```shell
-swift4j-cli --package <JAVA_PACKAGE> --java-version <JAVA_VERSION> -o <OUTPUT_FOLDER> <INPUT SWIFT FILES>
+swift4j-cli --package <JVM_PACKAGE> [--kotlin] --java-version <JAVA_VERSION> -o <OUTPUT_FOLDER> <INPUT SWIFT FILES>
 ```
 
 Parameters:
 	
-- **JAVA_PACKAGE** (required): Java package name for the generated classes
+- **JVM_PACKAGE** (required): JVM package name for the generated classes
+- **--kotlin** (optional): Generate all bridges as Kotlin sources. Without this flag, Java remains the default (enums represented as sealed classes are still generated in Kotlin)
 - **JAVA_VERSION** (optional): Java version the generated source has to be compatible with (default: 11). For Android has to be adjusted depending on the minimal API level
 - **OUTPUT_FOLDER** (optional): Output folder (default: outputs classes to the standart output)	 
 
 To generate bridgings using the SPM package plugin, execute the following command in the folder where your `Package.swift` is located:
 
 ```shell
-swift package plugin generate-java-bridging --product <PRODUCT> --java-version <JAVA_VERSION>
+swift package plugin generate-java-bridging --product <PRODUCT> [--kotlin] --java-version <JAVA_VERSION>
 ```
 
 Parameters:
 - **PRODUCT** (required): Product name from your package for which the bridgings has to be generated 
+- **--kotlin** (optional): Forward the Kotlin-generation flag to `swift4j-cli`
 - **JAVA_VERSION** (optional): Same as for the CLI version 
 
 The SPM plugin recursively iterates over all targets of the product and generates bridgings for all classes marked by the `@jvm` macro. It uses a target name as a Java package name for all classes within the target. That's why it does not need a Java package name as an input. The generated classes are written into the Swift package's build folder (default: `.build/plugins/generate-java-bridging/outputs`). For every target a separate folder is created in the output folder.

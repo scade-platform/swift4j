@@ -19,7 +19,21 @@ extension IdentifierTypeSyntax: MappableTypeSyntax {
 
   ///TODO: add suport for more flexibel mapping using some sort of external definitions
   private static func map(name: String, with ctx: inout ProxyGenerator.Context, primitivesAsObjects: Bool) -> String {
-    switch name {
+    if case .kotlin = ctx.settings.language {
+      switch name {
+      case "Bool": return "Boolean"
+      case "Int", "Int64": return "Long"
+      case "Int32": return "Int"
+      case "Int16": return "Short"
+      case "Int8": return "Byte"
+      case "Float": return "Float"
+      case "Double": return "Double"
+      case "Void": return "Unit"
+      default: break
+      }
+    }
+
+    return switch name {
         // Primitives
       case "Bool": primitivesAsObjects ? "Boolean" : "boolean"
       case "Int", "Int64": primitivesAsObjects ? "Long" : "long"

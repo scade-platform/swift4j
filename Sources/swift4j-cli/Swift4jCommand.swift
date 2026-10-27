@@ -8,12 +8,16 @@ struct Swift4jCommand: ParsableCommand {
   var outdir: String?
 
   @Option(name: .long,
-          help: "Java package name")
+          help: "JVM package name")
   var package: String
   
   @Option(name: .long,
           help: "Java version")
   var javaVersion: Int = 11
+
+  @Flag(name: .long,
+        help: "Generate Kotlin bridges instead of Java bridges")
+  var kotlin: Bool = false
 
   @Flag(name: .long,
           help: "Generate Android ViewModels for Swift Observables",)
@@ -53,7 +57,10 @@ struct Swift4jCommand: ParsableCommand {
 
 
   mutating func run() throws {
-    let proxyGenerator = ProxyGenerator(package: package, javaVersion: javaVersion)
+    let language: ProxyGenerator.Settings.Language = kotlin
+      ? .kotlin
+      : .java(version: javaVersion)
+    let proxyGenerator = ProxyGenerator(package: package, language: language)
     let viewModelGenerator = ViewModelsGenerator(package: package)
 
     for p in paths {

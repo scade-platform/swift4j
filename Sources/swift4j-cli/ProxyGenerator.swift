@@ -35,6 +35,13 @@ class ProxyGenerator: SyntaxVisitor {
     super.init(viewMode: .fixedUp)
   }
 
+  init(package: String, language: Settings.Language) {
+    self.package = package
+    self.settings = Settings(language: language)
+
+    super.init(viewMode: .fixedUp)
+  }
+
   override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
     if node.isExported  {
       typeGens.append(ClassGenerator(node, settings: settings))
